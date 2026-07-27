@@ -1,0 +1,423 @@
+"use client";
+import React, { useMemo, useRef, useState } from "react";
+import { useUserContext } from "@/context/UserContext";
+import { ConfigProvider, Drawer, Dropdown, Modal, Select, message, theme } from "antd";
+import {
+  FiPlus,
+  FiEdit2,
+  FiTrash2,
+  FiMoreVertical,
+  FiUpload,
+  FiSearch,
+  FiSave,
+} from "react-icons/fi";
+import { BiCategory, BiCheckCircle, BiXCircle } from "react-icons/bi";
+
+// ---------------------------------------------------------------------------
+// Dummy seed data — swap for your real fetch/query
+// ---------------------------------------------------------------------------
+const INITIAL_CATEGORIES = [
+  { id: 1, name: "Design", slug: "design", status: "Active", createdAt: "5-Jan-2024", image: null },
+  { id: 2, name: "Development", slug: "development", status: "Active", createdAt: "5-Jan-2024", image: null },
+  { id: 3, name: "Art", slug: "art", status: "Active", createdAt: "5-Jan-2024", image: null },
+];
+
+const slugify = (text) =>
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+const emptyForm = { id: null, name: "", slug: "", status: "Active", image: null, imagePreview: "" };
+
+const AdminBrandCategories = () => {
+  const { isdark } = useUserContext();
+
+  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const modalBodyRef = useRef(null);
+
+  const isEditing = form.id !== null;
+
+  const stats = useMemo(() => {
+    const total = categories.length;
+    const active = categories.filter((c) => c.status === "Active").length;
+    return { total, active, inactive: total - active };
+  }, [categories]);
+
+  const filtered = useMemo(
+    () =>
+      categories.filter((c) =>
+        `${c.name} ${c.slug}`.toLowerCase().includes(search.toLowerCase())
+      ),
+    [categories, search]
+  );
+
+  // ---- Theme tokens (plain Tailwind, used outside antd components) -------
+  const t = {
+    card: isdark ? "bg-[#1e293b] border-[#334155]" : "bg-white border-gray-200",
+    text: isdark ? "text-gray-200" : "text-gray-700",
+    subtext: isdark ? "text-gray-400" : "text-gray-500",
+    tableHead: isdark ? "bg-[#1e293b] text-gray-400" : "bg-white text-gray-500",
+    rowBorder: isdark ? "border-[#334155]" : "border-gray-100",
+    rowHover: isdark ? "hover:bg-[#273449]" : "hover:bg-gray-50",
+    input: isdark
+      ? "bg-[#0f172a] border-[#475569] text-white placeholder:text-gray-500"
+      : "bg-white border-gray-300 text-gray-700 placeholder:text-gray-400",
+  };
+
+  // ---- antd theme — single source of truth for every antd component on
+  // this page (Modal, Select, Dropdown). Swap the algorithm + a few tokens
+  // and every antd component here follows automatically. -----------------
+  const antdTheme = {
+    algorithm: isdark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    token: {
+      colorPrimary: "#8b5cf6",
+      borderRadius: 8,
+    },
+    components: {
+      Select: {
+        selectorBg: isdark ? "#0f172a" : "#ffffff",
+        colorText: isdark ? "#ffffff" : "#111827",
+        colorBorder: isdark ? "#475569" : "#d9d9d9",
+        colorPrimaryHover: isdark ? "#8b5cf6" : "#4096ff",
+        colorPrimary: "#8b5cf6",
+        controlOutline: "transparent",
+        controlHeight: 44,
+        optionSelectedBg: isdark ? "#334155" : "#e6f4ff",
+        colorBgElevated: isdark ? "#1e293b" : "#ffffff",
+      },
+      Modal: {
+        contentBg: isdark ? "#1e293b" : "#ffffff",
+        headerBg: isdark ? "#1e293b" : "#ffffff",
+        titleColor: isdark ? "#ffffff" : "#111827",
+        colorText: isdark ? "#e2e8f0" : "#374151",
+        colorIcon: isdark ? "#94a3b8" : "#6b7280",
+        colorIconHover: isdark ? "#e2e8f0" : "#111827",
+      },
+      Drawer: {
+        colorBgElevated: isdark ? "#1e293b" : "#ffffff",
+        colorText: isdark ? "#e2e8f0" : "#374151",
+        colorIcon: isdark ? "#94a3b8" : "#6b7280",
+        colorIconHover: isdark ? "#e2e8f0" : "#111827",
+        colorSplit: isdark ? "#334155" : "#f0f0f0",
+      },
+      Dropdown: {
+        colorBgElevated: isdark ? "#1e293b" : "#ffffff",
+        colorText: isdark ? "#e2e8f0" : "#374151",
+        controlItemBgHover: isdark ? "#334155" : "#f3f4f6",
+      },
+    },
+  };
+
+  // ---- Handlers ---------------------------------------------------------
+  const openAddModal = () => {
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (cat) => {
+    setForm({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      status: cat.status,
+      image: null,
+      imagePreview: cat.image || "",
+    });
+    setModalOpen(true);
+  };
+
+  const handleDelete = (id) => {
+    Modal.confirm({
+      title: "Delete category?",
+      content: "This action cannot be undone.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: () => {
+        setCategories((prev) => prev.filter((c) => c.id !== id));
+        message.success("Category deleted");
+      },
+    });
+  };
+
+  const handleNameChange = (value) => {
+    setForm((f) => ({ ...f, name: value, slug: slugify(value) }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm((f) => ({ ...f, image: file, imagePreview: URL.createObjectURL(file) }));
+  };
+
+  const handleSave = () => {
+    if (!form.name.trim()) {
+      message.error("Title is required");
+      return;
+    }
+    setSaving(true);
+    setTimeout(() => {
+      if (isEditing) {
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === form.id
+              ? { ...c, name: form.name, slug: form.slug, status: form.status, image: form.imagePreview }
+              : c
+          )
+        );
+        message.success("Category updated");
+      } else {
+        setCategories((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            name: form.name,
+            slug: form.slug,
+            status: form.status,
+            image: form.imagePreview,
+            createdAt: new Date().toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            }),
+          },
+        ]);
+        message.success("Category added");
+      }
+      setSaving(false);
+      setModalOpen(false);
+    }, 400);
+  };
+
+  // ---- Render -------------------------------------------------------------
+  return (
+    <ConfigProvider theme={antdTheme}>
+      <div >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className={`text-sm ${t.subtext}`}>
+              <span className="text-[#8b5cf6]">Admin</span> {">"} Brand Categories
+            </p>
+            <h1 className={`text-xl font-semibold mt-1 ${t.text}`}>Brand Categories</h1>
+          </div>
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            <FiPlus size={16} />
+            Add New
+          </button>
+        </div>
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <StatCard
+            t={t}
+            icon={<BiCategory size={20} />}
+            iconBg="bg-[#8b5cf6]/15 text-[#8b5cf6]"
+            label="Total"
+            value={stats.total}
+          />
+          <StatCard
+            t={t}
+            icon={<BiCheckCircle size={20} />}
+            iconBg="bg-emerald-500/15 text-emerald-500"
+            label="Active"
+            value={stats.active}
+          />
+          <StatCard
+            t={t}
+            icon={<BiXCircle size={20} />}
+            iconBg="bg-rose-500/15 text-rose-500"
+            label="Inactive"
+            value={stats.inactive}
+          />
+        </div>
+
+        {/* Table card */}
+        <div className={`rounded-xl border ${t.card} overflow-hidden`}>
+   
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className={t.tableHead}>
+                  {["Name", "Slug", "Status", "Created At", "Action"].map((h) => (
+                    <th key={h} className="text-left font-medium px-4 py-3 whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((cat) => (
+                  <tr key={cat.id} className={`border-t ${t.rowBorder} ${t.rowHover} transition-colors`}>
+                    <td className={`px-4 py-3 font-medium ${t.text}`}>{cat.name}</td>
+                    <td className={`px-4 py-3 ${t.subtext}`}>{cat.slug}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={cat.status} />
+                    </td>
+                    <td className={`px-4 py-3 ${t.subtext}`}>{cat.createdAt}</td>
+                    <td className="px-4 py-3">
+                      <Dropdown
+                        trigger={["click"]}
+                        menu={{
+                          items: [
+                            {
+                              key: "edit",
+                              label: (
+                                <span className="flex items-center gap-2">
+                                  <FiEdit2 size={14} /> Edit
+                                </span>
+                              ),
+                              onClick: () => openEditModal(cat),
+                            },
+                            {
+                              key: "delete",
+                              danger: true,
+                              label: (
+                                <span className="flex items-center gap-2">
+                                  <FiTrash2 size={14} /> Delete
+                                </span>
+                              ),
+                              onClick: () => handleDelete(cat.id),
+                            },
+                          ],
+                        }}
+                      >
+                        <button
+                          className={`p-1.5 rounded-md ${isdark ? "hover:bg-[#334155]" : "hover:bg-gray-100"}`}
+                        >
+                          <FiMoreVertical size={16} className={t.subtext} />
+                        </button>
+                      </Dropdown>
+                    </td>
+                  </tr>
+                ))}
+
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className={`px-4 py-10 text-center ${t.subtext}`}>
+                      No categories found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Add / Edit panel — slides in from the right edge, matching the
+            video exactly. Drawer, Select and Dropdown all theme from the
+            single ConfigProvider above. */}
+        <Drawer
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          placement="right"
+          width={400}
+          title={isEditing ? "Edit Category" : "Add New Category"}
+          destroyOnClose
+        >
+          <div ref={modalBodyRef}>
+            <label className={`block text-sm mb-1 ${t.subtext}`}>Title</label>
+            <input
+              value={form.name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              type="text"
+              className={`w-full h-11 rounded-lg px-3.5 mb-4 border outline-none ${t.input}`}
+            />
+            {form.slug && (
+              <p className={`text-xs -mt-3 mb-4 ${t.subtext}`}>
+                Slug: <span className="text-[#8b5cf6]">{form.slug}</span>
+              </p>
+            )}
+
+            <label className={`block text-sm mb-1 ${t.subtext}`}>Preview</label>
+            <div className={`flex items-stretch rounded-lg border overflow-hidden mb-4 h-11 ${t.input}`}>
+              <label className="flex items-center gap-2 px-4 cursor-pointer text-sm font-medium text-white bg-[#64748b] hover:bg-[#556071] shrink-0">
+                <FiUpload size={14} />
+                Choose File
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              </label>
+              <span className={`flex items-center px-3 text-sm truncate ${t.subtext}`}>
+                {form.image ? form.image.name : "No file chosen"}
+              </span>
+            </div>
+
+            <label className={`block text-sm mb-1 ${t.subtext}`}>Status</label>
+            <Select
+              value={form.status}
+              onChange={(value) => setForm((f) => ({ ...f, status: value }))}
+              getPopupContainer={() => modalBodyRef.current || document.body}
+              style={{ width: "100%" }}
+              options={[
+                { value: "Active", label: "Active" },
+                { value: "Inactive", label: "Inactive" },
+              ]}
+            />
+
+            <div className="flex items-center justify-between mt-6">
+              <button
+                onClick={() => setModalOpen(false)}
+                className={`px-5 py-2 rounded-lg text-sm border ${
+                  isdark ? "border-[#475569] text-gray-300" : "border-gray-300 text-gray-600"
+                }`}
+              >
+                Close
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-[#a855f7] to-[#7c3aed] disabled:opacity-60"
+              >
+                {saving ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <FiSave size={14} />
+                    {isEditing ? "Update" : "Create"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </Drawer>
+      </div>
+    </ConfigProvider>
+  );
+};
+
+const StatCard = ({ t, icon, iconBg, label, value }) => (
+  <div className={`rounded-xl border ${t.card} p-4 flex items-center gap-3`}>
+    <span className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
+      {icon}
+    </span>
+    <div>
+      <p className={`text-xs ${t.subtext}`}>{label}</p>
+      <p className={`text-lg font-semibold ${t.text}`}>{value}</p>
+    </div>
+  </div>
+);
+
+const StatusBadge = ({ status }) => {
+  const active = status === "Active";
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+        active
+          ? "bg-emerald-500/15 text-emerald-500"
+          : "bg-rose-500/15 text-rose-500"
+      }`}
+    >
+      {status}
+    </span>
+  );
+};
+
+export default AdminBrandCategories;
