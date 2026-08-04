@@ -320,7 +320,7 @@ const AdminBrandCategories = () => {
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           placement="right"
-          width={400}
+          size={400}
           title={isEditing ? "Edit Category" : "Add New Category"}
           destroyOnClose
         >

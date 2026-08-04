@@ -1,4 +1,5 @@
 "use client";
+import PageLoader from "@/components/common/Pageloader";
 import { useUserContext } from "@/context/UserContext";
 import { Modal, Select, ConfigProvider, theme } from "antd";
 import Image from "next/image";
@@ -72,6 +73,7 @@ const DashbordPage = () => {
 
   return (
     <div>
+      {/* <PageLoader/> */}
       <div
         className={`flex items-center gap-2 text-sm  ${isdark ? "text-[#64748b]" : "text-[#64748b]"}`}
       >

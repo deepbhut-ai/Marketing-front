@@ -1,0 +1,377 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { useUserContext } from "@/context/UserContext";
+import { ConfigProvider, DatePicker, Select, message, theme } from "antd";
+const { RangePicker } = DatePicker;
+import dayjs from "dayjs";
+import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter, FaTiktok, FaYoutube } from "react-icons/fa6";
+
+const POST_TYPES = [
+  { value: "content", label: "Content Post" },
+  { value: "image", label: "Image Post" },
+];
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const PLATFORM_OPTIONS = [
+  { value: "instagram", label: "Instagram", icon: FaInstagram, color: "#e1306c" },
+  { value: "facebook", label: "Facebook", icon: FaFacebookF, color: "#1877f2" },
+  { value: "twitter", label: "Twitter / X", icon: FaXTwitter, color: "#000000" },
+  { value: "linkedin", label: "LinkedIn", icon: FaLinkedinIn, color: "#0a66c2" },
+  { value: "tiktok", label: "TikTok", icon: FaTiktok, color: "#010101" },
+  { value: "youtube", label: "YouTube", icon: FaYoutube, color: "#ff0000" },
+];
+
+// Separate lookup so icon components never end up inside the `options`
+// array antd hands to its internal <div>/<Option> nodes — passing a
+// component reference as an option field gets spread onto the DOM and
+// React rejects it ("Invalid value for prop `icon` on <div> tag").
+const PLATFORM_MAP = Object.fromEntries(PLATFORM_OPTIONS.map((p) => [p.value, p]));
+
+const MAX_RANGE_DAYS = 21;
+
+// Used only if the browser doesn't support Intl.supportedValuesOf (older
+// Safari) — modern Chrome/Edge/Firefox/Safari 16+ all support it, in which
+// case the full IANA list is used instead of this short fallback.
+const FALLBACK_TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Kolkata",
+  "Asia/Dubai",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Australia/Sydney",
+];
+
+// Builds { value: "Asia/Kolkata", label: "Asia/Kolkata (GMT+5:30)" } for
+// every supported IANA zone, so the Select shows the current UTC offset
+// alongside the zone name.
+const getTimezoneOptions = () => {
+  const zones =
+    typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("timeZone")
+      : FALLBACK_TIMEZONES;
+
+  return zones.map((tz) => {
+    let offset = "";
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        timeZoneName: "shortOffset",
+      }).formatToParts(new Date());
+      offset = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+    } catch {
+      // ignore zones the runtime can't format
+    }
+    return { value: tz, label: offset ? `${tz} (${offset})` : tz };
+  });
+};
+
+const Stagetwo = ({
+  onNext,
+  onBack,
+  scheduleRange,
+  setScheduleRange,
+  postTypes,
+  setPostTypes,
+  activeDays,
+  setActiveDays,
+  platforms,
+  setPlatforms,
+  timezone,
+  setTimezone,
+}) => {
+  const { isdark } = useUserContext();
+  const [messageApi, contextHolder] = message.useMessage();
+
+  const [stage] = useState(2);
+
+  // Detected on mount (client-only) so SSR doesn't guess the wrong zone —
+  // defaults to the visitor's actual PC/browser timezone.
+  const [timezoneOptions, setTimezoneOptions] = useState([]);
+
+  useEffect(() => {
+    // Auto-detect browser timezone on first mount
+    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    setTimezoneOptions(getTimezoneOptions());
+  }, []);
+
+  const today = dayjs().startOf("day");
+  const maxDate = today.add(MAX_RANGE_DAYS, "day").endOf("day");
+
+  // ---- antd theme — same pattern as the rest of the app ------------------
+  const antdTheme = {
+    algorithm: isdark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    components: {
+      Select: {
+        selectorBg: isdark ? "#0f172a" : "#ffffff",
+        colorText: isdark ? "#ffffff" : "#000000",
+        colorBorder: isdark ? "#475569" : "#d9d9d9",
+        colorPrimaryHover: isdark ? "#8b5cf6" : "#4096ff",
+        colorPrimary: "#8b5cf6",
+        controlOutline: "transparent",
+        controlHeight: 44,
+        optionSelectedBg: isdark ? "#334155" : "#e6f4ff",
+        colorBgElevated: isdark ? "#1e293b" : "#ffffff",
+      },
+      DatePicker: {
+        colorBgContainer: isdark ? "#0f172a" : "#ffffff",
+        colorText: isdark ? "#ffffff" : "#000000",
+        colorTextPlaceholder: isdark ? "#64748b" : "#94a3b8",
+        colorBorder: isdark ? "#475569" : "#d9d9d9",
+        colorPrimaryHover: isdark ? "#8b5cf6" : "#4096ff",
+        colorPrimary: "#8b5cf6",
+        controlOutline: "transparent",
+        controlHeight: 44,
+        colorBgElevated: isdark ? "#1e293b" : "#ffffff",
+        cellActiveWithRangeBg: isdark ? "#334155" : "#e6f4ff",
+      },
+    },
+  };
+
+  // Only allow the next 21 days (today included) to be picked
+  const disabledDate = (current) => {
+    if (!current) return false;
+    return current.isBefore(today, "day") || current.isAfter(maxDate, "day");
+  };
+
+  // At least one post type must always stay selected — block the toggle
+  // when it would remove the last remaining selection.
+  const togglePostType = (value) => {
+    setPostTypes((prev) => {
+      const isActive = prev.includes(value);
+      if (isActive && prev.length === 1) return prev; // can't remove the last one
+      return isActive ? prev.filter((v) => v !== value) : [...prev, value];
+    });
+  };
+
+  const toggleDay = (day) => {
+    setActiveDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  const handleNext = () => {
+    const missing = [];
+    if (!scheduleRange) missing.push("Schedule From & To");
+    if (platforms.length === 0) missing.push("Social Platform");
+    if (activeDays.length === 0) missing.push("Post Day");
+    if (missing.length > 0) {
+      messageApi.warning(`Please fill in: ${missing.join(", ")}`);
+      return;
+    }
+    onNext?.();
+  };
+
+  const handleBack = () => {
+    onBack?.();
+  };
+
+  return (
+    <ConfigProvider theme={antdTheme}>
+      <div
+        className={`shadow-sm rounded-xl p-5 sm:p-8 md:p-10 ${
+          isdark ? "bg-[#1e293b]" : "bg-white"
+        }`}
+      >
+        {contextHolder}
+        {/* Stage badge */}
+        <div className="flex justify-center mb-8 sm:mb-10">
+          <span className="bg-[#8b5cf6] text-white text-sm font-semibold px-5 py-2 rounded-full">
+            Stage {stage}
+          </span>
+        </div>
+        <div className="lg:flex justify-between gap-5">
+          {/* 1. From / To date & time — next 21 days only */}
+          <div className="mb-6 w-full">
+            <label
+              className={`block text-sm font-semibold mb-2 ${
+                isdark ? "text-white" : "text-[#475569]"
+              }`}
+            >
+              Schedule From &amp; To <span className="text-red-500">*</span>
+            </label>
+            <RangePicker
+              value={scheduleRange}
+              onChange={(value) => setScheduleRange(value)}
+              showTime={{ format: "hh:mm A" }}
+              format="DD MMM YYYY, hh:mm A"
+              disabledDate={disabledDate}
+              placeholder={["From date", "To date"]}
+              style={{ width: "100%", height: 44 }}
+            />
+            <p className={`text-xs mt-1.5 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+              Both dates must fall within the next {MAX_RANGE_DAYS} days from today.
+            </p>
+          </div>
+
+          {/* 2. Timezone — defaults to the user's PC/browser timezone */}
+          <div className="mb-6 w-full">
+            <label
+              className={`block text-sm font-semibold mb-2 ${
+                isdark ? "text-white" : "text-[#475569]"
+              }`}
+            >
+              Timezone <span className="text-red-500">*</span>
+            </label>
+            <Select
+              showSearch
+              value={timezone}
+              onChange={setTimezone}
+              options={timezoneOptions}
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+              style={{ width: "100%" }}
+            />
+            <p className={`text-xs mt-1.5 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+              Detected automatically from your device — change it if you're scheduling for
+              a different region.
+            </p>
+          </div>
+        </div>
+        <div className="lg:flex justify-between gap-5">
+          {/* 3. Post type — both Content Post and Image Post can be selected
+              together, but at least one must always remain active */}
+          <div className="mb-6 w-full">
+            <label
+              className={`block text-sm font-semibold mb-2 ${
+                isdark ? "text-white" : "text-[#475569]"
+              }`}
+            >
+              Post Type <span className="text-red-500">*</span>
+            </label>
+            <div
+              className={`inline-flex p-1 rounded-lg gap-1 ${
+                isdark ? "bg-[#0f172a]" : "bg-gray-100"
+              }`}
+            >
+              {POST_TYPES.map((opt) => {
+                const active = postTypes.includes(opt.value);
+                const isLastActive = active && postTypes.length === 1;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={active}
+                    disabled={isLastActive}
+                    onClick={() => togglePostType(opt.value)}
+                    title={isLastActive ? "At least one post type must be selected" : undefined}
+                    className={`px-5 py-2 rounded-md text-sm font-medium transition-colors ${
+                      active
+                        ? `bg-[#8b5cf6] text-white shadow-sm ${isLastActive ? "cursor-not-allowed opacity-90" : ""}`
+                        : isdark
+                          ? "text-[#94a3b8] hover:text-white"
+                          : "text-[#64748b] hover:text-[#1e293b]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className={`text-xs mt-1.5 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+              Select one or both — at least one post type must stay selected.
+            </p>
+          </div>
+
+          {/* 4. Post days — any day, including weekends, is selectable */}
+          <div className="mb-6 w-full">
+            <label
+              className={`block text-sm font-semibold mb-2 ${
+                isdark ? "text-white" : "text-[#475569]"
+              }`}
+            >
+              Post Days <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {DAYS.map((day) => {
+                const active = activeDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    className={`w-12 h-12 rounded-full text-sm font-medium border transition-colors ${
+                      active
+                        ? "bg-[#8b5cf6] border-[#8b5cf6] text-white"
+                        : isdark
+                          ? "border-gray-600 text-[#94a3b8] hover:border-[#8b5cf6]"
+                          : "border-gray-200 text-[#64748b] hover:border-[#8b5cf6]"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+            <p className={`text-xs mt-1.5 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+              Weekends are selectable too — pick any combination of days.
+            </p>
+          </div>
+        </div>
+
+        {/* 5. Social platforms — multi-select */}
+        <div className="mb-2 w-full">
+          <label
+            className={`block text-sm font-semibold mb-2 ${
+              isdark ? "text-white" : "text-[#475569]"
+            }`}
+          >
+            Social Platforms <span className="text-red-500">*</span>
+          </label>
+          <Select
+            mode="multiple"
+            value={platforms}
+            onChange={setPlatforms}
+            placeholder="Select platforms"
+            style={{ width: "100%" }}
+            optionLabelProp="label"
+            options={PLATFORM_OPTIONS.map((p) => ({
+              value: p.value,
+              label: p.label,
+            }))}
+            optionRender={(option) => {
+              const platform = PLATFORM_MAP[option.value];
+              const Icon = platform.icon;
+              return (
+                <span className="flex items-center gap-2">
+                  <Icon size={14} style={{ color: platform.color }} />
+                  {platform.label}
+                </span>
+              );
+            }}
+          />
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-8 sm:mt-10">
+          <button
+            onClick={handleBack}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-colors btn-generate`}
+          >
+            <FiArrowLeft size={16} />
+            Back
+          </button>
+          <button
+            onClick={handleNext}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-colors btn-generate`}
+          >
+            Next
+            <FiArrowRight size={16} />
+          </button>
+        </div>
+      </div>
+    </ConfigProvider>
+  );
+};
+
+export default Stagetwo;

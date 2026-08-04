@@ -16,6 +16,7 @@ import { Tooltip } from "antd";
 import { usePathname } from "next/navigation";
 const menuItems = [
   { label: "Dashboard",linknav:"/dashboard", icon: BiHomeAlt,  },
+  { label: "Create Post",linknav:"/create-post", icon: BiHomeAlt,  },
   { label: "Contact",linknav:"/contact", icon: BiGrid },
   { label: "Analytics", linknav:"/analytics", icon: VscGraph },
   { label: "Assets", linknav:"/assets", icon: BsImage },

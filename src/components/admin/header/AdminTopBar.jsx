@@ -7,6 +7,7 @@ import { useUserContext } from "@/context/UserContext";
 import { FaMoon, FaUser } from "react-icons/fa";
 import { IoMoon } from "react-icons/io5";
 import Link from "next/link";
+import { logout } from "@/lib/apiClient";
 const AdminTopBar = () => {
   const { sidebarOpen, setSidebarOpen, isdark, handelDrakmode, openMobileNav, setOpenMobileNav } =
     useUserContext();
@@ -171,7 +172,10 @@ const AdminTopBar = () => {
                   <FaUser /> Edit Profile
                 </Link>
               </li>
-              <li  className={`flex gap-3 items-center ${isdark ? "hover:bg-[#334155] rounded-t-md" : "hover:bg-gray-100 rounded-t-md"} ps-3 py-1 pt-2 cursor-pointer ${!isdark && "text-black"} `}>
+              <li
+                onClick={logout}
+                className={`flex gap-3 items-center ${isdark ? "hover:bg-[#334155] rounded-t-md" : "hover:bg-gray-100 rounded-t-md"} ps-3 py-1 pt-2 cursor-pointer ${!isdark && "text-black"} `}
+              >
                 <div className="flex gap-3 items-center">
                   <FiLogOut /> Logout
                 </div>
