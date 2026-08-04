@@ -254,7 +254,7 @@ const AdminBrandSlogans = () => {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           placement="right"
-          width={400}
+          size={400}
           title={isEditing ? "Edit Slogan" : "Add New Slogan"}
           destroyOnClose
         >

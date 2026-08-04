@@ -1,0 +1,188 @@
+.root {
+  /* light mode tokens (default) */
+  --bg: #ffffff;
+  --text: #0f1729;
+  --text-soft: #6b7280;
+  --ring-track: rgba(124, 58, 237, 0.12);
+  --purple: #7c3aed;
+  --pink: #ec4899;
+  --teal: #10b981;
+
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* dark mode tokens, applied when isdark is true */
+.dark {
+  --bg: #0b1220;
+  --text: #f3f4f6;
+  --text-soft: #9ca3af;
+  --ring-track: rgba(124, 58, 237, 0.22);
+}
+
+.loaderWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+}
+
+.orbit {
+  position: relative;
+  width: 170px;
+  height: 170px;
+}
+
+/* static center core, no motion */
+.orbitCore {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  box-shadow: 0 0 14px rgba(124, 58, 237, 0.5);
+}
+
+/* faint static track shaped like a loop that swells around each icon */
+.loopSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.trackPath {
+  fill: none;
+  stroke: var(--ring-track);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 4 6;
+}
+
+/* the moving snake segment travels along that same loopy path */
+.snakePath {
+  fill: none;
+  stroke: url(#snakeGradient);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 90 900;
+  stroke-dashoffset: 0;
+  animation: snakeMove 4.2s linear infinite;
+  filter: drop-shadow(0 0 6px var(--pink));
+}
+
+@keyframes snakeMove {
+  to {
+    stroke-dashoffset: -990;
+  }
+}
+
+/* icons: fixed in place, no orbiting, only a size pulse */
+.iconSlot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+.iconBubble {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+.iconBubble svg {
+  width: 21px;
+  height: 21px;
+}
+
+@keyframes iconPulse {
+  0%,
+  100% {
+    transform: scale(0.82);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+.slot1 {
+  transform: rotate(0deg) translate(85px) rotate(0deg);
+}
+.slot2 {
+  transform: rotate(60deg) translate(85px) rotate(-60deg);
+}
+.slot3 {
+  transform: rotate(120deg) translate(85px) rotate(-120deg);
+}
+.slot4 {
+  transform: rotate(180deg) translate(85px) rotate(-180deg);
+}
+.slot5 {
+  transform: rotate(240deg) translate(85px) rotate(-240deg);
+}
+.slot6 {
+  transform: rotate(300deg) translate(85px) rotate(-300deg);
+}
+
+.slot1 .iconBubble {
+  background: #1877f2;
+  animation-delay: 0s;
+}
+.slot2 .iconBubble {
+  background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af);
+  animation-delay: 0.15s;
+}
+.slot3 .iconBubble {
+  background: #000000;
+  animation-delay: 0.3s;
+}
+.slot4 .iconBubble {
+  background: #ff0000;
+  animation-delay: 0.45s;
+}
+.slot5 .iconBubble {
+  background: #0a66c2;
+  animation-delay: 0.6s;
+}
+.slot6 .iconBubble {
+  background: #25d366;
+  animation-delay: 0.75s;
+}
+
+.loaderBrand {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-align: center;
+  background: linear-gradient(90deg, var(--purple), var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.loaderText {
+  font-size: 13px;
+  color: var(--text-soft);
+  text-align: center;
+}
