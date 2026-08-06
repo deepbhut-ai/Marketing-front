@@ -31,7 +31,7 @@ const menuItems = [
   { label: "Subscription", linknav:"/subscription", icon: PiSubtitles },
   { label: "Credits", linknav:"/credits", icon: GoCreditCard },
   { label: "Supports", linknav:"/supports", icon: FiPhoneCall },
-  { label: "Account Settings",linknav:"/profile", icon: MdOutlineSettings },
+  { label: "Account Settings",linknav:"/settings", icon: MdOutlineSettings },
 ];
 
 const Header = () => {

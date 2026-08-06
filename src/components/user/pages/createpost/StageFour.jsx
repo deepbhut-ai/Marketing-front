@@ -1,8 +1,9 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useUserContext } from "@/context/UserContext";
 import { ConfigProvider, Modal, TimePicker, message, theme } from "antd";
 import dayjs from "dayjs";
+import { apiFetch } from "@/lib/apiClient";
 import {
   FiArrowLeft,
   FiArrowRight,
@@ -17,18 +18,35 @@ import { FaRegCircleCheck } from "react-icons/fa6";
 
 const MAX_RANGE_DAYS = 21;
 
-// ---------------------------------------------------------------------------
-// Dummy AI-generated image seeds — replace with your real image-gen API
-// response. In production each item's `image` comes from the backend once
-// Stage 2's From/To range + "Image Post" selection are submitted; the
-// number of cards should equal the number of days in that range, capped
-// at MAX_RANGE_DAYS (21) just like Stage 2 / Stage 3.
-// ---------------------------------------------------------------------------
 const imageUrlForSeed = (seed) => `https://picsum.photos/seed/${seed}/600/450`;
 
-const buildInitialItems = (count = MAX_RANGE_DAYS, scheduledDates = []) => {
+// ---------------------------------------------------------------------------
+// Build the working list of day cards from the real API response items
+// (from Stage-2's generate-captions endpoint). Each item has:
+//   { day, scheduled_at, content, hashtags, day_group_id, post_ids, image_url }
+// Falls back to placeholder cards if no API data is available yet.
+// ---------------------------------------------------------------------------
+const buildInitialItems = (generatedItems = [], scheduledDates = []) => {
   const today = dayjs().startOf("day").hour(10).minute(0);
-  return Array.from({ length: count }, (_, i) => ({
+
+  if (generatedItems && generatedItems.length > 0) {
+    return generatedItems.map((item, i) => {
+      const scheduledAt =
+        item.scheduled_at ? dayjs(item.scheduled_at) : (scheduledDates[i] || today.add(i, "day"));
+      return {
+        id: i + 1,
+        day: item.day ?? i,
+        image: item.image_url || imageUrlForSeed(`marketingira-${i}`),
+        prompt: "",
+        scheduledAt,
+        day_group_id: item.day_group_id,
+        post_ids: item.post_ids,
+      };
+    });
+  }
+
+  // Fallback placeholder cards
+  return Array.from({ length: MAX_RANGE_DAYS }, (_, i) => ({
     id: i + 1,
     day: i,
     image: imageUrlForSeed(`marketingira-${i}`),
@@ -44,12 +62,27 @@ const pickImage = (prompt, id) => {
   return imageUrlForSeed(`${id}-${base}`);
 };
 
-const StageFour = ({ onNext, onBack, onBackToContent, hasContent = true, dayCount = MAX_RANGE_DAYS, scheduledDates = [] }) => {
+const StageFour = ({
+  onNext,
+  onBack,
+  onBackToContent,
+  hasContent = true,
+  dayCount = MAX_RANGE_DAYS,
+  scheduledDates = [],
+  generatedItems = [],
+  title,
+  website,
+  description,
+  postTypes = [],
+  setGeneratedItems,
+}) => {
   const { isdark } = useUserContext();
   const [messageApi, messageContextHolder] = message.useMessage();
 
   const [stage] = useState(4);
-  const [items, setItems] = useState(() => buildInitialItems(dayCount, scheduledDates));
+  const [items, setItems] = useState(() =>
+    buildInitialItems(generatedItems, scheduledDates)
+  );
   // currentIndex only ever moves forward — approving a day is final, so
   // there's no "previous" control anywhere in this component.
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -89,16 +122,73 @@ const StageFour = ({ onNext, onBack, onBackToContent, hasContent = true, dayCoun
     );
   };
 
-  // Update: regenerate this day's image using its description, stay put
-  const handleUpdate = () => {
+  // Sync updated items back to CreatePost so StageFive sees the
+  // regenerated image in the review/preview.
+  useEffect(() => {
+    if (!setGeneratedItems) return;
+    setGeneratedItems(
+      items.map((it) => ({
+        day: it.day,
+        scheduled_at: it.scheduledAt?.toISOString() || null,
+        content: it.content?.split("\n\n")[0] || it.content || "",
+        hashtags: it.content?.split("\n\n")[1] || "",
+        day_group_id: it.day_group_id,
+        post_ids: it.post_ids,
+        image_url: it.image || "",
+      }))
+    );
+  }, [items, setGeneratedItems]);
+
+  // Regenerate the image for the current day only via the same
+  // posts/regenerate-day-group/ endpoint used in Stage Three.
+  const handleUpdate = async () => {
     if (!current) return;
     setRegenerating(true);
-    // TODO: replace with your real "regenerate image" API call — send
-    // current.prompt as the instruction.
-    setTimeout(() => {
-      updateCurrent({ image: pickImage(current.prompt, current.id) });
+
+    const payload = {
+      day_group_id: current.day_group_id,
+      description: current.prompt?.trim() ? current.prompt : description,
+      prompt: current.prompt || "",
+      day: current.day,
+      scheduled_at: current.scheduledAt?.toISOString() || null,
+      website,
+      title,
+      brand_summary: "",
+      model: "",
+      post_types: postTypes,
+    };
+
+    try {
+      const data = await apiFetch("posts/regenerate-day-group/", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const result = Array.isArray(data) ? data[0] ?? {} : data ?? {};
+      const d = result?.data || {};
+      // Image can be in data.items[0], data.posts[0], or at the top level
+      const item = (d.items && d.items[0]) || {};
+      const post = (d.posts && d.posts[0]) || {};
+      const newImage =
+        item.image_url ||
+        post.image_url ||
+        d.image_url ||
+        result?.image_url ||
+        current.image;
+      updateCurrent({ image: newImage });
+      messageApi.success(
+        result?.message || d?.message || "Image regenerated successfully"
+      );
+    } catch (error) {
+      console.error("Regenerate image failed:", error);
+      const errRaw = error?.data;
+      const errResult = Array.isArray(errRaw) ? errRaw[0] ?? {} : errRaw ?? {};
+      const errMsg =
+        errResult?.message || error?.message || "Failed to regenerate image";
+      messageApi.error(errMsg);
+    } finally {
       setRegenerating(false);
-    }, 600);
+    }
   };
 
   // Approve: lock this day in and move forward — cannot come back.
@@ -374,7 +464,7 @@ const StageFour = ({ onNext, onBack, onBackToContent, hasContent = true, dayCoun
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors"
                 >
                   <FiCheck size={16} />
-                  Approve{" "}&amp;{" "}Next{" "}Day
+                  Approve&nbsp;&amp;&nbsp;Next&nbsp;Day
                 </button>
               </div>
             </div>

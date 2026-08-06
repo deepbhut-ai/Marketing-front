@@ -5,6 +5,7 @@ import { ConfigProvider, DatePicker, Select, message, theme } from "antd";
 const { RangePicker } = DatePicker;
 import dayjs from "dayjs";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import { apiFetch } from "@/lib/apiClient";
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter, FaTiktok, FaYoutube } from "react-icons/fa6";
 
 const POST_TYPES = [
@@ -75,6 +76,37 @@ const getTimezoneOptions = () => {
   });
 };
 
+// Day-name -> dayjs().day() index, used by the range/active-day check below.
+const DAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+// Returns true if at least one calendar day inside [from, to] falls on one
+// of the selected active weekdays. Bounded by MAX_RANGE_DAYS (21), so the
+// loop is always cheap.
+const rangeHasActiveDay = (range, days) => {
+  if (!range?.[0] || !range?.[1] || !days?.length) return false;
+  const wanted = new Set(days.map((d) => DAY_INDEX[d]));
+  let cursor = range[0].startOf("day");
+  const end = range[1].startOf("day");
+  let guard = 0;
+  while ((cursor.isBefore(end, "day") || cursor.isSame(end, "day")) && guard <= MAX_RANGE_DAYS + 1) {
+    if (wanted.has(cursor.day())) return true;
+    cursor = cursor.add(1, "day");
+    guard += 1;
+  }
+  return false;
+};
+
+// The generate-captions endpoint can respond in a couple of different
+// shapes depending on status code / middleware:
+//   - a plain object:            { success, message, data: {...} }
+//   - an array-like [body, status] pair: [{ success:false, message, errors }, 400]
+// This normalizes both down to the actual body object so callers only
+// ever have to check `result.success`.
+const normalizeApiResponse = (data) => {
+  if (Array.isArray(data)) return data[0] ?? null;
+  return data ?? null;
+};
+
 const Stagetwo = ({
   onNext,
   onBack,
@@ -88,11 +120,16 @@ const Stagetwo = ({
   setPlatforms,
   timezone,
   setTimezone,
+  title,
+  website,
+  description,
+  setGeneratedItems,
 }) => {
   const { isdark } = useUserContext();
   const [messageApi, contextHolder] = message.useMessage();
 
   const [stage] = useState(2);
+  const [generating, setGenerating] = useState(false);
 
   // Detected on mount (client-only) so SSR doesn't guess the wrong zone —
   // defaults to the visitor's actual PC/browser timezone.
@@ -159,7 +196,7 @@ const Stagetwo = ({
     );
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const missing = [];
     if (!scheduleRange) missing.push("Schedule From & To");
     if (platforms.length === 0) missing.push("Social Platform");
@@ -168,7 +205,68 @@ const Stagetwo = ({
       messageApi.warning(`Please fill in: ${missing.join(", ")}`);
       return;
     }
-    onNext?.();
+
+    // Client-side guard: catch a range/active-day mismatch before ever
+    // calling the API (e.g. range is Thu–Fri but only "Mon" is active).
+    if (!rangeHasActiveDay(scheduleRange, activeDays)) {
+      messageApi.error(
+        "No valid dates in the given range with the selected active days"
+      );
+      return;
+    }
+
+    const payload = {
+      description,
+      platforms,
+      from_date: scheduleRange?.[0]?.toISOString() || null,
+      to_date: scheduleRange?.[1]?.toISOString() || null,
+      active_days: activeDays,
+      timezone,
+      post_types: postTypes,
+      website,
+      title,
+    };
+
+    setGenerating(true);
+    try {
+      const data = await apiFetch("posts/generate-captions/", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      // Normalize: response can come back as either a plain object
+      // ({success, message, data}) or an array-like [body, status] pair
+      // (e.g. [{success:false, message:"...", errors:{}}, 400]).
+      const result = normalizeApiResponse(data);
+
+      // Handle the API returning success: false in the body (whichever
+      // shape it arrived in) — stay on this stage and surface the message.
+      if (!result || result.success === false) {
+        messageApi.error(
+          result?.message || "Failed to generate captions"
+        );
+        return;
+      }
+
+      const items = result?.data?.items || result?.items || [];
+      setGeneratedItems(items);
+      messageApi.success(
+        result?.data?.message || result?.message || "Captions generated successfully"
+      );
+      onNext?.();
+    } catch (error) {
+      console.error("Generate captions failed:", error);
+      const errData = normalizeApiResponse(error?.data) || error?.data;
+      const errMsg =
+        (Array.isArray(errData) && errData[0]?.message) ||
+        errData?.message ||
+        errData?.detail ||
+        error?.message ||
+        "Failed to generate captions";
+      messageApi.error(errMsg);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleBack = () => {
@@ -363,9 +461,10 @@ const Stagetwo = ({
           </button>
           <button
             onClick={handleNext}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-colors btn-generate`}
+            disabled={generating}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-colors btn-generate disabled:opacity-50`}
           >
-            Next
+            {generating ? "Generating..." : "Next"}
             <FiArrowRight size={16} />
           </button>
         </div>

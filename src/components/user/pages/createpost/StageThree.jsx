@@ -1,8 +1,9 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useUserContext } from "@/context/UserContext";
 import { ConfigProvider, DatePicker, Modal, TimePicker, message, theme } from "antd";
 import dayjs from "dayjs";
+import { apiFetch } from "@/lib/apiClient";
 import {
   FiArrowLeft,
   FiArrowRight,
@@ -18,69 +19,67 @@ import { FaRegCircleCheck } from "react-icons/fa6";
 const MAX_RANGE_DAYS = 21;
 
 // ---------------------------------------------------------------------------
-// Dummy AI-suggested content — replace with your real API response.
-// In production this array (and each item's `content`) comes from the
-// backend once Stage 2's From/To range + platforms are submitted; the
-// number of cards should equal the number of days between From and To,
-// capped at MAX_RANGE_DAYS (21) just like the Stage 2 date range.
+// Build the working list of day cards from the API response items array
+// (from Stage-2's generate-captions endpoint). Each item has:
+//   { day, scheduled_at, content, hashtags, day_group_id, post_ids }
+// When no API data is available yet we fall back to placeholder cards
+// so the stage still renders during development.
 // ---------------------------------------------------------------------------
-const DUMMY_SUGGESTIONS = [
-  "Unlock 50+ new leads this week with AI-driven outreach that actually converts.",
-  "Behind the scenes: how our platform fine-tunes a custom model in under 60 seconds.",
-  "Stop guessing. Start deploying. See how domain-specific AI beats generic models.",
-  "3 mistakes business owners make when adopting AI — and how to avoid them.",
-  "From idea to deployed AI model in one afternoon. Here's how our early users did it.",
-  "No ML degree required. Just your business data and 60 seconds.",
-  "Case study: how a mid-size SaaS company cut support tickets by 40% with custom AI.",
-  "Your competitors are already fine-tuning AI for their niche. Are you?",
-  "Why 'good enough' generic AI is costing you customers — and what to do instead.",
-  "A sneak peek at this week's product update: faster fine-tuning, smarter defaults.",
-  "The real ROI of custom AI models for non-technical teams, explained simply.",
-  "Meet the founders: why we built a platform for business owners, not engineers.",
-  "5-minute demo: watch us go from raw data to a working AI model live.",
-  "What 'enterprise-ready AI' actually means — and how to spot the real thing.",
-  "Customer spotlight: how Zettalgor helped scale outreach across 3 new markets.",
-  "The hidden cost of waiting to adopt AI in your industry.",
-  "How to brief your team on AI adoption without the technical jargon.",
-  "New integration alert: connect your CRM and go live with AI in minutes.",
-  "Why speed to deployment matters more than model size for most businesses.",
-  "A founder's honest take on choosing build vs. buy for AI infrastructure.",
-  "Ready to scale? Here's what the next 90 days could look like with custom AI.",
-];
-
-const buildInitialItems = (count = MAX_RANGE_DAYS, scheduledDates = []) => {
+const buildInitialItems = (generatedItems, scheduledDates = []) => {
   const today = dayjs().startOf("day").hour(10).minute(0);
-  return Array.from({ length: count }, (_, i) => ({
+
+  if (generatedItems && generatedItems.length > 0) {
+    return generatedItems.map((item, i) => {
+      const scheduledAt =
+        item.scheduled_at ? dayjs(item.scheduled_at) : (scheduledDates[i] || today.add(i, "day"));
+      const content = item.content
+        ? item.hashtags
+          ? `${item.content}\n\n${item.hashtags}`
+          : item.content
+        : "";
+      return {
+        id: i + 1,
+        day: item.day ?? i,
+        content,
+        image: null,
+        prompt: "",
+        scheduledAt,
+        day_group_id: item.day_group_id,
+        post_ids: item.post_ids,
+      };
+    });
+  }
+
+  // Fallback placeholder cards
+  return Array.from({ length: MAX_RANGE_DAYS }, (_, i) => ({
     id: i + 1,
     day: i,
-    content: DUMMY_SUGGESTIONS[i % DUMMY_SUGGESTIONS.length],
-    // No image in this dummy data — wire this up to your real API response
-    // (or Stage 2's "Image Post" selection) once available. The preview
-    // below only renders the image block when this is truthy.
+    content: "",
     image: null,
     prompt: "",
     scheduledAt: scheduledDates[i] || today.add(i, "day"),
   }));
 };
 
-// Simple deterministic-ish picker so the same description tends to produce
-// the same "generated" line — swap this whole function for your real API
-// call, sending `prompt` as the instruction when it's non-empty.
-const pickSuggestion = (prompt) => {
-  if (!prompt || !prompt.trim()) {
-    return DUMMY_SUGGESTIONS[Math.floor(Math.random() * DUMMY_SUGGESTIONS.length)];
-  }
-  let hash = 0;
-  for (let i = 0; i < prompt.length; i++) hash = (hash * 31 + prompt.charCodeAt(i)) >>> 0;
-  return DUMMY_SUGGESTIONS[hash % DUMMY_SUGGESTIONS.length];
-};
-
-const StageThree = ({ onNext, onBack, dayCount = MAX_RANGE_DAYS, scheduledDates = [] }) => {
+const StageThree = ({
+  onNext,
+  onBack,
+  dayCount = MAX_RANGE_DAYS,
+  scheduledDates = [],
+  generatedItems = [],
+  title,
+  website,
+  description,
+  postTypes = [],
+  setGeneratedItems,
+}) => {
   const { isdark } = useUserContext();
   const [messageApi, messageContextHolder] = message.useMessage();
 
   const [stage] = useState(3);
-  const [items, setItems] = useState(() => buildInitialItems(dayCount, scheduledDates));
+  const [items, setItems] = useState(() =>
+    buildInitialItems(generatedItems, scheduledDates)
+  );
   // currentIndex only ever moves forward — approving a day is final, so
   // there's no "previous" control anywhere in this component.
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -131,16 +130,73 @@ const StageThree = ({ onNext, onBack, dayCount = MAX_RANGE_DAYS, scheduledDates 
     );
   };
 
-  // Update: regenerate this day's content using its description, stay put
-  const handleUpdate = () => {
+  // Sync the current items back to CreatePost so StageFive sees updated
+  // content in the review/preview. Called via useEffect to avoid
+  // updating a parent component during render.
+  useEffect(() => {
+    if (!setGeneratedItems) return;
+    setGeneratedItems(
+      items.map((it) => ({
+        day: it.day,
+        scheduled_at: it.scheduledAt?.toISOString() || null,
+        content: it.content?.split("\n\n")[0] || it.content || "",
+        hashtags: it.content?.split("\n\n")[1] || "",
+        day_group_id: it.day_group_id,
+        post_ids: it.post_ids,
+        image_url: it.image || "",
+      }))
+    );
+  }, [items, setGeneratedItems]);
+
+  // Regenerate the caption for the current day only.
+  // Uses the per-card prompt input if provided, otherwise falls back
+  // to the original `description` from Stage 1.
+  const handleUpdate = async () => {
     if (!current) return;
     setRegenerating(true);
-    // TODO: replace with your real "regenerate suggestion" API call —
-    // send current.prompt as the instruction.
-    setTimeout(() => {
-      updateCurrent({ content: pickSuggestion(current.prompt) });
+
+    const payload = {
+      day_group_id: current.day_group_id,
+      description: current.prompt?.trim() ? current.prompt : description,
+      prompt: current.prompt || "",
+      day: current.day,
+      scheduled_at: current.scheduledAt?.toISOString() || null,
+      website,
+      title,
+      brand_summary: "",
+      model: "",
+      post_types: postTypes,
+    };
+
+    try {
+      const data = await apiFetch("posts/regenerate-day-group/", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      // Normalize: response can be a plain object or [body, status] array
+      const result = Array.isArray(data) ? data[0] ?? {} : data ?? {};
+      const d = result?.data || {};
+      // Regenerated content comes back in data.items[0]
+      const item = (d.items && d.items[0]) || {};
+      const regenerated =
+        item.content || d.content || result?.content || current.content;
+      const hashtags = item.hashtags || d.hashtags || result?.hashtags || "";
+      const newContent = hashtags ? `${regenerated}\n\n${hashtags}` : regenerated;
+      updateCurrent({ content: newContent });
+      messageApi.success(
+        result?.message || d?.message || "Caption regenerated successfully"
+      );
+    } catch (error) {
+      console.error("Regenerate caption failed:", error);
+      const errRaw = error?.data;
+      const errResult = Array.isArray(errRaw) ? errRaw[0] ?? {} : errRaw ?? {};
+      const errMsg =
+        errResult?.message || error?.message || "Failed to regenerate caption";
+      messageApi.error(errMsg);
+    } finally {
       setRegenerating(false);
-    }, 600);
+    }
   };
 
   // Approve: lock this day in and move forward — cannot come back.
@@ -402,7 +458,7 @@ const StageThree = ({ onNext, onBack, dayCount = MAX_RANGE_DAYS, scheduledDates 
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors"
                 >
                   <FiCheck size={16} />
-                  Approve{" "}&amp;{" "}Next{" "}Day
+                  Approve&nbsp;&amp;&nbsp;Next&nbsp;Day
                 </button>
               </div>
             </div>
