@@ -16,6 +16,14 @@ const CreatePost = () => {
   const { isdark } = useUserContext();
   const [stageIndex, setStageIndex] = useState(0);
 
+  // ── Lifted Stage-1 state ──────────────────────────────────────────────
+  const [title, setTitle] = useState("");
+  const [website, setWebsite] = useState("");
+  const [description, setDescription] = useState("");
+
+  // ── Generated captions from Stage-2 API (consumed by Stage-3) ─────────
+  const [generatedItems, setGeneratedItems] = useState([]);
+
   // ── Lifted Stage-2 state ──────────────────────────────────────────────
   const [scheduleRange, setScheduleRange] = useState(null);
   const [postTypes, setPostTypes] = useState(["content"]);
@@ -98,7 +106,17 @@ const CreatePost = () => {
 
       {/* Stage body */}
       <div>
-        {currentStageId === "details" && <StageOne onNext={goNext} />}
+        {currentStageId === "details" && (
+          <StageOne
+            onNext={goNext}
+            title={title}
+            setTitle={setTitle}
+            website={website}
+            setWebsite={setWebsite}
+            description={description}
+            setDescription={setDescription}
+          />
+        )}
 
         {currentStageId === "schedule" && (
           <Stagetwo
@@ -114,6 +132,10 @@ const CreatePost = () => {
             setPlatforms={setPlatforms}
             timezone={timezone}
             setTimezone={setTimezone}
+            title={title}
+            website={website}
+            description={description}
+            setGeneratedItems={setGeneratedItems}
           />
         )}
 
@@ -123,6 +145,12 @@ const CreatePost = () => {
             onBack={goBack}
             dayCount={dayCount || 1}
             scheduledDates={scheduledDates}
+            generatedItems={generatedItems}
+            title={title}
+            website={website}
+            description={description}
+            postTypes={postTypes}
+            setGeneratedItems={setGeneratedItems}
           />
         )}
 
@@ -138,6 +166,12 @@ const CreatePost = () => {
             hasContent={hasContent}
             dayCount={dayCount || 1}
             scheduledDates={scheduledDates}
+            generatedItems={generatedItems}
+            title={title}
+            website={website}
+            description={description}
+            postTypes={postTypes}
+            setGeneratedItems={setGeneratedItems}
           />
         )}
 
@@ -147,6 +181,7 @@ const CreatePost = () => {
             dayCount={dayCount || 1}
             scheduledDates={scheduledDates}
             postTypes={postTypes}
+            generatedItems={generatedItems}
           />
         )}
       </div>

@@ -26,9 +26,9 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
-              "font-src 'self' data:",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https://agents.zettalgor.com https://picsum.photos",
+              "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://agents.zettalgor.com",
               "object-src 'none'",
               "base-uri 'self'",

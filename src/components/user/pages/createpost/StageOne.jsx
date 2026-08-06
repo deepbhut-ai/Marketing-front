@@ -2,24 +2,77 @@
 import React, { useState } from "react";
 import { message } from "antd";
 import { useUserContext } from "@/context/UserContext";
+import { apiFetch } from "@/lib/apiClient";
 import { HiSparkles } from "react-icons/hi2";
 import { FiArrowRight } from "react-icons/fi";
 
-const StageOne = ({ onNext }) => {
+// The enhance-description endpoint can respond in a couple of different
+// shapes depending on status code / middleware:
+//   - a plain object:                     { success, message, data: {...} }
+//   - an array-like [body, status] pair:  [{ success:false, message, errors }, 400]
+// This normalizes both down to the actual body object so callers only
+// ever have to check `result.success`.
+const normalizeApiResponse = (data) => {
+  if (Array.isArray(data)) return data[0] ?? null;
+  return data ?? null;
+};
+
+const StageOne = ({ onNext, title, setTitle, website, setWebsite, description, setDescription }) => {
   const { isdark } = useUserContext();
   const [messageApi, contextHolder] = message.useMessage();
 
   const [stage] = useState(1);
-  const [title, setTitle] = useState("");
-  const [website, setWebsite] = useState("");
-  const [description, setDescription] = useState("");
   const [enhancing, setEnhancing] = useState(false);
 
-  const handleEnhance = () => {
+  const handleEnhance = async () => {
     if (!description.trim()) return;
     setEnhancing(true);
-    // TODO: replace with your real AI-enhance API call
-    setTimeout(() => setEnhancing(false), 900);
+
+    try {
+      const data = await apiFetch("posts/enhance-description/", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          website,
+          description,
+        }),
+      });
+
+      // Normalize: response can come back as either a plain object
+      // ({success, message, data}) or an array-like [body, status] pair
+      // (e.g. [{success:false, message:"Zettalgor API request failed",
+      // errors:{details:"..."}}, 400]).
+      const result = normalizeApiResponse(data);
+
+      // Handle the API returning success: false in the body (whichever
+      // shape it arrived in) — don't touch the description, just show
+      // the error and stop.
+      if (!result || result.success === false) {
+        messageApi.error(result?.message || "Failed to enhance description");
+        return;
+      }
+
+      const enhanced =
+        result?.data?.enhanced_description ||
+        result?.data?.description ||
+        result?.enhanced_description ||
+        result?.description ||
+        "";
+      setDescription(enhanced);
+      messageApi.success(result?.data?.message || result?.message || "Description enhanced successfully");
+    } catch (error) {
+      console.error("Enhance failed:", error);
+      const errData = normalizeApiResponse(error?.data) || error?.data;
+      const errMsg =
+        (Array.isArray(errData) && errData[0]?.message) ||
+        errData?.message ||
+        errData?.detail ||
+        error?.message ||
+        "Failed to enhance description";
+      messageApi.error(errMsg);
+    } finally {
+      setEnhancing(false);
+    }
   };
 
   const handleNext = () => {

@@ -14,36 +14,53 @@ import {
 
 const MAX_RANGE_DAYS = 21;
 
-// ---------------------------------------------------------------------------
-// Dummy combined preview data — replace with the real, approved output of
-// Stage 3 (content) and Stage 4 (image) once they're wired together (e.g.
-// via shared state/context/URL params across the wizard). Each entry here
-// represents one day's final post exactly as it will be published.
-// ---------------------------------------------------------------------------
-const DUMMY_CONTENT = [
-  "Unlock 50+ new leads this week with AI-driven outreach that actually converts.",
-  "Behind the scenes: how our platform fine-tunes a custom model in under 60 seconds.",
-  "Stop guessing. Start deploying. See how domain-specific AI beats generic models.",
-  "3 mistakes business owners make when adopting AI — and how to avoid them.",
-  "From idea to deployed AI model in one afternoon. Here's how our early users did it.",
-  "No ML degree required. Just your business data and 60 seconds.",
-  "Case study: how a mid-size SaaS company cut support tickets by 40% with custom AI.",
-];
-
 const imageUrlForSeed = (seed) => `https://picsum.photos/seed/${seed}/600/450`;
 
-const buildItems = (count = MAX_RANGE_DAYS, scheduledDates = [], hasContent = true, hasImage = true) => {
+// ---------------------------------------------------------------------------
+// Build the review items from the real API response items (from Stage-2's
+// generate-captions endpoint). Each item has:
+//   { day, scheduled_at, content, hashtags, day_group_id, post_ids, image_url }
+// Falls back to placeholder cards if no API data is available yet.
+// ---------------------------------------------------------------------------
+const buildItems = (generatedItems = [], scheduledDates = [], hasContent = true, hasImage = true) => {
   const today = dayjs().startOf("day").hour(10).minute(0);
-  return Array.from({ length: count }, (_, i) => ({
+
+  if (generatedItems && generatedItems.length > 0) {
+    return generatedItems.map((item, i) => {
+      const scheduledAt =
+        item.scheduled_at ? dayjs(item.scheduled_at) : (scheduledDates[i] || today.add(i, "day"));
+      const content = item.content
+        ? item.hashtags
+          ? `${item.content}\n\n${item.hashtags}`
+          : item.content
+        : "";
+      return {
+        id: i + 1,
+        day: item.day ?? i,
+        content: hasContent ? content : null,
+        image: hasImage ? (item.image_url || imageUrlForSeed(`marketingira-${i}`)) : null,
+        scheduledAt,
+      };
+    });
+  }
+
+  // Fallback placeholder cards
+  return Array.from({ length: MAX_RANGE_DAYS }, (_, i) => ({
     id: i + 1,
     day: i,
-    content: hasContent ? DUMMY_CONTENT[i % DUMMY_CONTENT.length] : null,
+    content: hasContent ? "" : null,
     image: hasImage ? imageUrlForSeed(`marketingira-${i}`) : null,
     scheduledAt: scheduledDates[i] || today.add(i, "day"),
   }));
 };
 
-const StageFive = ({ onBack, dayCount = MAX_RANGE_DAYS, scheduledDates = [], postTypes = ["content", "image"] }) => {
+const StageFive = ({
+  onBack,
+  dayCount = MAX_RANGE_DAYS,
+  scheduledDates = [],
+  postTypes = ["content", "image"],
+  generatedItems = [],
+}) => {
   const { isdark } = useUserContext();
   const [messageApi, messageContextHolder] = message.useMessage();
 
@@ -51,7 +68,9 @@ const StageFive = ({ onBack, dayCount = MAX_RANGE_DAYS, scheduledDates = [], pos
   const hasImage = postTypes.includes("image");
 
   const [stage] = useState(5);
-  const [items] = useState(() => buildItems(dayCount, scheduledDates, hasContent, hasImage));
+  const [items] = useState(() =>
+    buildItems(generatedItems, scheduledDates, hasContent, hasImage)
+  );
   const [submitting, setSubmitting] = useState(false);
   const [modal, modalContextHolder] = Modal.useModal();
 
