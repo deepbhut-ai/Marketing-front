@@ -118,6 +118,67 @@ export async function hydrateSession() {
   }
 }
 
+/**
+ * apiDownload('/agent/download/')
+ *
+ * Same auth + refresh logic as apiFetch, but returns a Blob instead
+ * of parsed JSON. Use for file downloads (e.g. .exe, .zip, images).
+ * Also returns the filename from the Content-Disposition header.
+ */
+export async function apiDownload(path, options = {}) {
+  const doRequest = (token) =>
+    fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+
+  let token = getAccessToken();
+  let res = await doRequest(token);
+
+  if (res.status === 401) {
+    try {
+      token = await refreshAccessToken();
+    } catch {
+      goToLogin();
+      throw new Error('Session expired. Redirecting to login.');
+    }
+    res = await doRequest(token);
+  }
+
+  if (!res.ok) {
+    const err = new Error(`Download failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+
+  // Extract filename from Content-Disposition header
+  const disposition = res.headers.get('Content-Disposition') || '';
+  let filename = 'agent.exe';
+
+  // RFC 5987 encoded format: filename*=UTF-8''example.exe
+  const starMatch = disposition.match(/filename\*=(?:UTF-8'')?"?([^";]+)"?/i);
+  if (starMatch) {
+    filename = decodeURIComponent(starMatch[1].replace(/"/g, '').trim());
+  } else {
+    // Traditional format: filename="example.exe" or filename=example.exe
+    const filenameMatch = disposition.match(/filename=?([^;]+)/i);
+    if (filenameMatch) {
+      filename = filenameMatch[1].replace(/"/g, '').trim();
+    }
+  }
+
+  // Ensure the file ends with .exe if no extension is present
+  if (filename && !/\.[a-z0-9]+$/i.test(filename)) {
+    filename = `${filename}.exe`;
+  }
+
+  const blob = await res.blob();
+  return { blob, filename };
+}
+
 export async function logout() {
   clearAccessToken();
   try {

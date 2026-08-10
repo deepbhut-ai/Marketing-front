@@ -426,6 +426,39 @@ color: #d8dee7;
 }
 
 /* -----------------------------------------------------------
+   Page content scrollbar — themed for light/dark mode.
+   Applied to the <main> in (user)/layout.jsx and (admin)/layout.jsx.
+   ----------------------------------------------------------- */
+.page-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.page-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.page-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.page-scroll:hover::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+}
+/* Dark mode */
+.dark-mode .page-scroll::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.dark-mode .page-scroll:hover::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+/* Firefox */
+.page-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.dark-mode .page-scroll {
+  scrollbar-color: #334155 transparent;
+}
+
+/* -----------------------------------------------------------
    Login page — animated rotating gradient border ("moving
    border") around the card, and a shine sweep for the CTA.
    Single fixed dark theme, no toggle involved.

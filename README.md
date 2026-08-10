@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# MarketingIRA — AI-Powered Social Suite
+
+A Next.js front-end for managing brands, scheduling posts, generating AI captions/images, and analytics.
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **UI:** Ant Design 6, Tailwind CSS 4, React Icons
+- **Charts:** Recharts
+- **Auth:** Custom token-based (in-memory access token + httpOnly refresh cookie)
+- **API Backend:** `https://agents.zettalgor.com/`
+
+## Prerequisites
+
+- Node.js >= 18
+- npm (or yarn / pnpm / bun)
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment variables
+
+Create a `.env` file in the project root (already exists — edit if needed):
+
+```env
+NEXT_PUBLIC_API_URL=https://agents.zettalgor.com/
+```
+
+### 3. Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app starts on **http://localhost:3002** (port 3002 is configured in `package.json`).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 4. Open in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Navigate to [http://localhost:3002/login](http://localhost:3002/login) to log in.
 
-## Learn More
+## Available Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server on port 3002 |
+| `npm run build` | Production build |
+| `npm run start` | Start production server on port 3002 |
+| `npm run lint` | Run ESLint |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
++-- app/
+¦   +-- (auth)/          # Login, register, forgot password, verify OTP
+¦   +-- (admin)/         # Admin dashboard, brand categories, logos, slogans
+¦   +-- (user)/          # User pages (dashboard, create-post, brands, settings, etc.)
+¦   +-- api/             # Auth proxy routes (login, logout, refresh)
+¦   +-- layout.js        # Root layout
+¦   +-- globals.css      # Global styles + Tailwind
++-- components/
+¦   +-- admin/           # Admin header, pages
+¦   +-- common/          # Page loader
+¦   +-- user/
+¦   ¦   +-- header/      # User header, top bar
+¦   ¦   +-- pages/       # All user-facing page components
+¦   ¦   ¦   +-- createpost/  # 5-stage post creation wizard
+¦   ¦   ¦   ¦   +-- CreatePost.jsx
+¦   ¦   ¦   ¦   +-- StageOne.jsx    # Details (title, website, description)
+¦   ¦   ¦   ¦   +-- Stagetwo.jsx    # Schedule, platforms, post types
+¦   ¦   ¦   ¦   +-- StageThree.jsx   # Content review + regenerate
+¦   ¦   ¦   ¦   +-- StageFour.jsx    # Image review + regenerate
+¦   ¦   ¦   ¦   +-- StageFive.jsx    # Final review & submit
+¦   ¦   ¦   +-- ...
+¦   ¦   +-- sections/   # Layout sections
++-- context/
+¦   +-- UserContext.jsx  # Theme (dark/light) + user context
++-- lib/
+¦   +-- apiClient.js     # Centralized API client with auto-refresh
+¦   +-- tokenStore.js    # In-memory access token store
++-- proxy.js             # API proxy config
+```
 
-## Deploy on Vercel
+## Key Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Authentication
+- Token-based auth with automatic refresh on 401
+- In-memory access token (XSS-safe, not in localStorage)
+- HttpOnly refresh cookie via `/api/refresh` route
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Create Post Wizard (5 stages)
+1. **Stage 1 — Details:** Title, website, description (with AI enhance)
+2. **Stage 2 — Schedule:** Date range, timezone, post types, platforms, active days
+3. **Stage 3 — Content:** Day-by-day AI caption review with regenerate
+4. **Stage 4 — Images:** Day-by-day AI image review with regenerate
+5. **Stage 5 — Review:** Final preview of all posts before scheduling
+
+### Settings — Gemini API
+- Save/update Gemini API key
+- View key status (last 4 characters shown)
+- Select default image & video models
+- Models loaded dynamically from the API
+
+### API Client
+All API calls go through `apiFetch` from `lib/apiClient.js`:
+- Attaches `Authorization: Bearer <token>` automatically
+- On 401, refreshes the token via `/api/refresh` and retries
+- Handles array-style error responses `[{"message": "..."}, 400]`
+
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL (default: `https://agents.zettalgor.com/`) |
+
+## Content Security Policy (CSP)
+
+CSP is configured in `next.config.mjs` to allow:
+- Images from `agents.zettalgor.com` and `picsum.photos`
+- Styles from `fonts.googleapis.com`
+- Fonts from `fonts.gstatic.com`
+- API connections to `agents.zettalgor.com`
+
+If you add new external domains for assets, update the CSP headers in `next.config.mjs`.

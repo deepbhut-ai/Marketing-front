@@ -256,7 +256,7 @@ const Settings = () => {
 
       {/* ---------- card ---------- */}
       <div
-        className={`max-w-[1060px] mx-auto rounded-lg p-6 sm:p-8 mt-6 ${
+        className={`max-w-[1060px] mx-auto rounded-lg hidden p-6 sm:p-8 mt-6 ${
           isdark ? "bg-[#1e293b]" : "bg-white shadow-sm"
         }`}
       >

@@ -1,23 +1,55 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { FiBell, FiLogOut } from "react-icons/fi";
+import { FiBell, FiDownload, FiLogOut } from "react-icons/fi";
 import { GoSun } from "react-icons/go";
 import { TbAlignLeft } from "react-icons/tb";
 import { useUserContext } from "@/context/UserContext";
 import { FaMoon, FaUser } from "react-icons/fa";
 import { IoMoon } from "react-icons/io5";
 import Link from "next/link";
-import { logout } from "@/lib/apiClient";
+import { logout, apiDownload } from "@/lib/apiClient";
+import { App } from "antd";
 const TopBar = () => {
   const { sidebarOpen, setSidebarOpen, isdark, handelDrakmode, openMobileNav, setOpenMobileNav } =
     useUserContext();
   const [openMode, setOpenMode] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const { message } = App.useApp();
 
   const modeRef = useRef(null);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
+
+  // Download the agent .exe from the API
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const { blob, filename } = await apiDownload("agent/download/");
+
+      // Verify we actually received a binary file
+      if (!blob || blob.size === 0) {
+        throw new Error("Received empty file");
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      message.success("Agent downloaded successfully");
+    } catch (error) {
+      console.error("Download failed:", error);
+      message.error("Failed to download agent. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handelMode = () => {
     setOpenMode(!openMode);
@@ -88,6 +120,21 @@ const TopBar = () => {
         />
       </div>
       <div className="flex gap-5 items-center">
+        {/* Download Agent .exe — left of the dark/light toggle */}
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          title="Download Agent"
+          className={`flex items-center gap-1.5 text-sm font-medium rounded-md px-3 py-1.5 transition-colors disabled:opacity-50 ${
+            isdark
+              ? "bg-[#1e293b] text-white hover:bg-[#334155]"
+              : "bg-[#8b5cf6] text-white hover:bg-[#7c3aed]"
+          }`}
+        >
+          <FiDownload size={16} className={downloading ? "animate-bounce" : ""} />
+          {downloading ? "Downloading..." : "Download Agent"}
+        </button>
+
         <div className="relative" ref={modeRef}>
           {!isdark ? (
             <GoSun

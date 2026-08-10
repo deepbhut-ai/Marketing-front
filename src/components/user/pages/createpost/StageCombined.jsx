@@ -13,6 +13,8 @@ import {
   FiShare2,
   FiCheck,
   FiImage,
+  FiType,
+  FiLayers,
 } from "react-icons/fi";
 import { FaRegCircleCheck } from "react-icons/fa6";
 
@@ -21,23 +23,30 @@ const MAX_RANGE_DAYS = 21;
 const imageUrlForSeed = (seed) => `https://picsum.photos/seed/${seed}/600/450`;
 
 // ---------------------------------------------------------------------------
-// Build the working list of day cards from the real API response items
-// (from Stage-2's generate-captions endpoint). Each item has:
-//   { day, scheduled_at, content, hashtags, day_group_id, post_ids, image_url }
-// Falls back to placeholder cards if no API data is available yet.
+// Build the working list of day cards from the API response items array.
+// Each item: { day, scheduled_at, content, hashtags, day_group_id, post_ids, image_url }
+// Falls back to placeholder cards when no API data is available yet.
 // ---------------------------------------------------------------------------
-const buildInitialItems = (generatedItems = [], scheduledDates = []) => {
+const buildInitialItems = (generatedItems, scheduledDates = []) => {
   const today = dayjs().startOf("day").hour(10).minute(0);
 
   if (generatedItems && generatedItems.length > 0) {
     return generatedItems.map((item, i) => {
       const scheduledAt =
         item.scheduled_at ? dayjs(item.scheduled_at) : (scheduledDates[i] || today.add(i, "day"));
+      const content = item.content
+        ? item.hashtags
+          ? `${item.content}\n\n${item.hashtags}`
+          : item.content
+        : "";
       return {
         id: i + 1,
         day: item.day ?? i,
+        content,
         image: item.image_url || imageUrlForSeed(`marketingira-${i}`),
-        prompt: "",
+        contentPrompt: "",
+        imagePrompt: "",
+        bothPrompt: "",
         scheduledAt,
         day_group_id: item.day_group_id,
         post_ids: item.post_ids,
@@ -49,24 +58,19 @@ const buildInitialItems = (generatedItems = [], scheduledDates = []) => {
   return Array.from({ length: MAX_RANGE_DAYS }, (_, i) => ({
     id: i + 1,
     day: i,
+    content: "",
     image: imageUrlForSeed(`marketingira-${i}`),
-    prompt: "",
+    contentPrompt: "",
+    imagePrompt: "",
+    bothPrompt: "",
     scheduledAt: scheduledDates[i] || today.add(i, "day"),
   }));
 };
 
-// Swap this whole function for your real image-generation API call, sending
-// `prompt` as the instruction when it's non-empty.
-const pickImage = (prompt, id) => {
-  const base = prompt && prompt.trim() ? prompt.trim() : `random-${Math.random()}`;
-  return imageUrlForSeed(`${id}-${base}`);
-};
-
-const StageFour = ({
+const StageCombined = ({
   onNext,
   onBack,
-  onBackToContent,
-  hasContent = true,
+  stageNum = 3,
   dayCount = MAX_RANGE_DAYS,
   scheduledDates = [],
   generatedItems = [],
@@ -80,17 +84,12 @@ const StageFour = ({
   const { isdark } = useUserContext();
   const [messageApi, messageContextHolder] = message.useMessage();
 
-  const [stage] = useState(4);
+  const [stage] = useState(stageNum);
   const [items, setItems] = useState(() =>
     buildInitialItems(generatedItems, scheduledDates)
   );
-  // currentIndex only ever moves forward — approving a day is final, so
-  // there's no "previous" control anywhere in this component.
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [regenerating, setRegenerating] = useState(false);
-  // Modal.useModal (not the static Modal.confirm) so the confirm dialog
-  // correctly inherits the ConfigProvider theme below instead of portaling
-  // outside it in light mode regardless of `isdark`.
+  const [regenerating, setRegenerating] = useState(null); // null | "content" | "image" | "both"
   const [modal, modalContextHolder] = Modal.useModal();
 
   const total = items.length;
@@ -148,8 +147,8 @@ const StageFour = ({
     }
   };
 
-  // Sync updated items back to CreatePost so StageFive sees the
-  // regenerated image in the review/preview.
+  // Sync the current items back to CreatePost so StageFive sees updated
+  // content + image in the review/preview.
   useEffect(() => {
     if (!setGeneratedItems) return;
     setGeneratedItems(
@@ -165,16 +164,23 @@ const StageFour = ({
     );
   }, [items, setGeneratedItems]);
 
-  // Regenerate the image for the current day only via the same
-  // posts/regenerate-day-group/ endpoint used in Stage Three.
-  const handleUpdate = async () => {
+  // ── Regenerate handlers ───────────────────────────────────────────────
+  // All three call the same posts/regenerate-day-group/ endpoint, but
+  // pass different `regenerate` values so the backend knows what to
+  // regenerate: "content", "image", or "both".
+  const handleRegenerate = async (mode) => {
     if (!current) return;
-    setRegenerating(true);
+    setRegenerating(mode);
+
+    // Pick the right prompt field based on mode
+    const promptField =
+      mode === "content" ? "contentPrompt" : mode === "image" ? "imagePrompt" : "bothPrompt";
+    const userPrompt = current[promptField]?.trim() || "";
 
     const payload = {
       day_group_id: current.day_group_id,
-      description: current.prompt?.trim() ? current.prompt : description,
-      prompt: current.prompt || "",
+      description: userPrompt || description,
+      prompt: userPrompt,
       day: current.day,
       scheduled_at: current.scheduledAt?.toISOString() || null,
       website,
@@ -182,6 +188,7 @@ const StageFour = ({
       brand_summary: "",
       model: "",
       post_types: postTypes,
+      regenerate: mode, // "content" | "image" | "both"
     };
 
     try {
@@ -192,52 +199,66 @@ const StageFour = ({
 
       const result = Array.isArray(data) ? data[0] ?? {} : data ?? {};
       const d = result?.data || {};
-      // Image can be in data.items[0], data.posts[0], or at the top level
       const item = (d.items && d.items[0]) || {};
       const post = (d.posts && d.posts[0]) || {};
-      const newImage =
-        item.image_url ||
-        post.image_url ||
-        d.image_url ||
-        result?.image_url ||
-        current.image;
 
-      if (newImage && newImage !== current.image) {
-        // The API returns the URL immediately, but the actual image
-        // file may still be generating on the server. Preload it
-        // before updating state so the spinner stays visible until
-        // the image is truly ready to display.
-        try {
-          await new Promise((resolve) => {
-            const img = new window.Image();
-            img.onload = resolve;
-            img.onerror = resolve; // resolve even on error — show whatever we have
-            img.src = newImage;
-            setTimeout(resolve, 30000); // safety timeout
-          });
-        } catch {
-          // ignore preload errors — update with the URL anyway
-        }
-        updateCurrent({ image: newImage });
+      if (mode === "content" || mode === "both") {
+        const regenerated =
+          item.content || d.content || result?.content || current.content;
+        const hashtags = item.hashtags || d.hashtags || result?.hashtags || "";
+        const newContent = hashtags ? `${regenerated}\n\n${hashtags}` : regenerated;
+        updateCurrent({ content: newContent });
       }
 
-      messageApi.success(
-        result?.message || d?.message || "Image regenerated successfully"
-      );
+      if (mode === "image" || mode === "both") {
+        const newImage =
+          item.image_url ||
+          post.image_url ||
+          d.image_url ||
+          result?.image_url ||
+          current.image;
+
+        if (newImage && newImage !== current.image) {
+          // The API returns the URL immediately, but the actual image
+          // file may still be generating on the server. Preload it
+          // before updating state so the spinner stays visible until
+          // the image is truly ready to display.
+          try {
+            await new Promise((resolve, reject) => {
+              const img = new window.Image();
+              img.onload = resolve;
+              img.onerror = resolve; // resolve even on error — show whatever we have
+              img.src = newImage;
+              // Safety timeout — don't block forever if the server is slow
+              setTimeout(resolve, 30000);
+            });
+          } catch {
+            // ignore preload errors — update with the URL anyway
+          }
+          updateCurrent({ image: newImage });
+        }
+      }
+
+      const successMsg =
+        mode === "content"
+          ? "Content regenerated successfully"
+          : mode === "image"
+            ? "Image regenerated successfully"
+            : "Content & image regenerated successfully";
+      messageApi.success(result?.message || d?.message || successMsg);
     } catch (error) {
-      console.error("Regenerate image failed:", error);
+      console.error(`Regenerate (${mode}) failed:`, error);
       const errRaw = error?.data;
       const errResult = Array.isArray(errRaw) ? errRaw[0] ?? {} : errRaw ?? {};
       const errMsg =
-        errResult?.message || error?.message || "Failed to regenerate image";
+        errResult?.message || error?.message || "Failed to regenerate";
       messageApi.error(errMsg);
     } finally {
-      setRegenerating(false);
+      setRegenerating(null);
     }
   };
 
   // Approve: lock this day in and move forward — cannot come back.
-  // Confirm first, since the action is irreversible.
   const handleApprove = () => {
     if (!current) return;
     modal.confirm({
@@ -251,12 +272,7 @@ const StageFour = ({
   };
 
   const handleBack = () => {
-    // If content stage exists, go back to it; otherwise go to schedule (stage 2)
-    if (hasContent) {
-      onBackToContent?.();
-    } else {
-      onBack?.();
-    }
+    onBack?.();
   };
 
   const handleNext = () => {
@@ -267,12 +283,22 @@ const StageFour = ({
     onNext?.();
   };
 
+  // Shared button class builder
+  const regenBtnCls = (isActive, isPrimary = false) =>
+    `flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors disabled:opacity-50 ${
+      isPrimary
+        ? "text-white bg-[#8b5cf6] hover:bg-[#7c3aed]"
+        : isdark
+          ? "border border-gray-600 text-white hover:bg-[#0f172a]"
+          : "border border-gray-200 text-[#475569] hover:bg-gray-50"
+    }`;
+
   return (
     <ConfigProvider theme={antdTheme}>
       {modalContextHolder}
       {messageContextHolder}
       <div
-        className={`shadow-sm rounded-xl p-5 sm:p-4 md:p-8 ${
+        className={`shadow-sm rounded-xl p-5 sm:p-6 md:p-8 ${
           isdark ? "bg-[#1e293b]" : "bg-white"
         }`}
       >
@@ -282,13 +308,13 @@ const StageFour = ({
             Stage {stage}
           </span>
         </div>
-        <p className={`text-center text-sm mb-2 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
-          Review each day's image, then Approve to lock it in and move to the next day —
-          once approved a day can't be revisited.
+        <p className={`text-center text-sm mb-6 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+          Review each day&apos;s post (image + content), then Approve to lock it in and move to
+          the next day — once approved a day can&apos;t be revisited.
         </p>
 
-        {/* Progress dots — approved (checked), current (ring), locked (dim) */}
-        <div className="flex items-center justify-center flex-wrap gap-1.5 mb-2">
+        {/* Progress dots */}
+        <div className="flex items-center justify-center flex-wrap gap-1.5 mb-8">
           {items.map((it, idx) => {
             const approved = idx < currentIndex;
             const isCurrent = idx === currentIndex;
@@ -321,7 +347,7 @@ const StageFour = ({
               All {total} days approved
             </h3>
             <p className={`text-sm mt-1 mb-6 ${isdark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
-              You're ready to move on to the next stage.
+              You&apos;re ready to move on to the next stage.
             </p>
             <div className="flex items-center gap-3">
               <button
@@ -345,7 +371,7 @@ const StageFour = ({
             </div>
           </div>
         ) : (
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md mx-auto mb-8">
             <p
               className={`text-center text-xs font-semibold uppercase tracking-wide mb-3 ${
                 isdark ? "text-[#8b5cf6]" : "text-[#7c3aed]"
@@ -354,12 +380,13 @@ const StageFour = ({
               Day {currentIndex + 1} of {total} — {current.scheduledAt.format("DD MMM YYYY")}
             </p>
 
-            {/* Social-post style preview — image focused */}
+            {/* ── Social-post style preview: image on top, content below ── */}
             <div
               className={`rounded-xl overflow-hidden border ${
                 isdark ? "bg-[#0f172a] border-gray-600" : "bg-white border-gray-200"
               }`}
             >
+              {/* Header */}
               <div
                 className={`flex items-center gap-3 p-3 border-b ${
                   isdark ? "border-gray-600" : "border-gray-100"
@@ -378,6 +405,7 @@ const StageFour = ({
                 </div>
               </div>
 
+              {/* Image — on top */}
               <div
                 className={`aspect-[4/3] relative flex items-center justify-center overflow-hidden ${
                   isdark ? "bg-[#1e293b]" : "bg-gray-100"
@@ -389,19 +417,36 @@ const StageFour = ({
                     src={current.image}
                     alt={`Day ${currentIndex + 1} suggestion`}
                     className={`w-full h-full object-cover transition-opacity ${
-                      regenerating ? "opacity-40" : "opacity-100"
+                      regenerating === "image" || regenerating === "both"
+                        ? "opacity-40"
+                        : "opacity-100"
                     }`}
                   />
                 ) : (
                   <FiImage size={32} className={isdark ? "text-[#334155]" : "text-gray-300"} />
                 )}
-                {regenerating && (
+                {(regenerating === "image" || regenerating === "both") && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <FiRefreshCw size={22} className="text-white animate-spin drop-shadow" />
                   </div>
                 )}
               </div>
 
+              {/* Content — below image */}
+              <div
+                className={`relative px-4 py-3 text-sm whitespace-pre-wrap ${
+                  isdark ? "text-gray-200" : "text-[#374151]"
+                }`}
+              >
+                {current.content}
+                {(regenerating === "content" || regenerating === "both") && (
+                  <span className="inline-flex items-center gap-1 ml-2 text-xs text-[#8b5cf6]">
+                    <FiRefreshCw size={11} className="animate-spin" /> regenerating…
+                  </span>
+                )}
+              </div>
+
+              {/* Footer actions */}
               <div
                 className={`flex items-center gap-5 px-4 py-3 border-t text-sm ${
                   isdark ? "border-gray-600 text-[#94a3b8]" : "border-gray-100 text-[#64748b]"
@@ -419,31 +464,71 @@ const StageFour = ({
               </div>
             </div>
 
-            {/* Editing controls for the current day only */}
-            <div className="mt-4 space-y-3">
+            {/* ── Regenerate options ── */}
+            <div className="mt-5 space-y-4">
+              {/* Three regenerate buttons: content only / image only / both */}
+              <div>
+                <label className={`block text-xs font-medium mb-2 ${isdark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
+                  Regenerate
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleRegenerate("content")}
+                    disabled={!!regenerating}
+                    className={regenBtnCls()}
+                  >
+                    <FiType size={14} className={regenerating === "content" ? "animate-spin" : ""} />
+                    {regenerating === "content" ? "…" : "Content only"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRegenerate("image")}
+                    disabled={!!regenerating}
+                    className={regenBtnCls()}
+                  >
+                    <FiImage size={14} className={regenerating === "image" ? "animate-spin" : ""} />
+                    {regenerating === "image" ? "…" : "Image only"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRegenerate("both")}
+                    disabled={!!regenerating}
+                    className={regenBtnCls(true)}
+                  >
+                    <FiLayers size={14} className={regenerating === "both" ? "animate-spin" : ""} />
+                    {regenerating === "both" ? "…" : "Both"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Prompt input — shared for whichever regenerate mode */}
               <div>
                 <label className={`block text-xs font-medium mb-1 ${isdark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
-                  Describe the image you want (optional)
+                  Describe what you want (optional)
                 </label>
                 <input
                   type="text"
-                  value={current.prompt}
-                  onChange={(e) => updateCurrent({ prompt: e.target.value })}
-                  placeholder="e.g. bright product shot on a purple gradient background"
+                  value={current.bothPrompt}
+                  onChange={(e) => updateCurrent({ bothPrompt: e.target.value })}
+                  placeholder="e.g. focus on customer testimonials with a bright product shot"
                   className={`w-full text-sm rounded-lg px-3 h-10 border outline-none transition-colors ${
                     isdark
                       ? "bg-[#0f172a] border-gray-600 text-white placeholder:text-[#64748b] focus:border-[#8b5cf6]"
                       : "bg-white border-gray-200 text-[#475569] placeholder:text-[#94a3b8] focus:border-[#8b5cf6]"
                   }`}
                 />
+                <p className={`text-xs mt-1 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+                  This prompt is used for whichever regenerate button you click above.
+                </p>
               </div>
 
+              {/* Schedule time */}
               <div>
                 <label className={`block text-xs font-medium mb-1 ${isdark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
                   Scheduled for
                 </label>
                 <div className="flex items-center gap-2">
-                  {/* Date is fixed to this day — only the time is editable */}
                   <div
                     className={`flex-1 h-10 rounded-lg px-3 flex items-center text-sm border ${
                       isdark
@@ -470,7 +555,7 @@ const StageFour = ({
                 </p>
               </div>
 
-              {/* Update / Approve */}
+              {/* Approve & Back */}
               <div className="flex items-center gap-3 pt-1">
                 {currentIndex === 0 && (
                   <button
@@ -488,20 +573,11 @@ const StageFour = ({
                 )}
                 <button
                   type="button"
-                  onClick={handleUpdate}
-                  disabled={regenerating}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#8b5cf6] hover:bg-[#7c3aed] transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  <FiRefreshCw size={14} className={regenerating ? "animate-spin shrink-0" : "shrink-0"} />
-                  {regenerating ? "Regenerating..." : "Regenerate"}
-                </button>
-                <button
-                  type="button"
                   onClick={handleApprove}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors"
                 >
                   <FiCheck size={16} />
-                  Approve&nbsp;&amp;&nbsp;Next&nbsp;Day
+                  Approve &amp; Next Day
                 </button>
               </div>
             </div>
@@ -512,4 +588,4 @@ const StageFour = ({
   );
 };
 
-export default StageFour;
+export default StageCombined;

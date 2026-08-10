@@ -2,7 +2,9 @@
 import React, { useMemo, useState } from "react";
 import { useUserContext } from "@/context/UserContext";
 import { ConfigProvider, Modal, message, theme } from "antd";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjsSetup";
+import { apiFetch } from "@/lib/apiClient";
+import { useRouter } from "next/navigation";
 import {
   FiArrowLeft,
   FiArrowRight,
@@ -10,19 +12,21 @@ import {
   FiMessageCircle,
   FiShare2,
   FiCheckCircle,
+  FiVideo,
 } from "react-icons/fi";
 
 const MAX_RANGE_DAYS = 21;
 
 const imageUrlForSeed = (seed) => `https://picsum.photos/seed/${seed}/600/450`;
+const fallbackVideo = "https://www.w3schools.com/html/mov_bbb.mp4";
 
 // ---------------------------------------------------------------------------
 // Build the review items from the real API response items (from Stage-2's
 // generate-captions endpoint). Each item has:
-//   { day, scheduled_at, content, hashtags, day_group_id, post_ids, image_url }
+//   { day, scheduled_at, content, hashtags, day_group_id, post_ids, image_url, video_url }
 // Falls back to placeholder cards if no API data is available yet.
 // ---------------------------------------------------------------------------
-const buildItems = (generatedItems = [], scheduledDates = [], hasContent = true, hasImage = true) => {
+const buildItems = (generatedItems = [], scheduledDates = [], hasContent = true, hasImage = true, hasVideo = false) => {
   const today = dayjs().startOf("day").hour(10).minute(0);
 
   if (generatedItems && generatedItems.length > 0) {
@@ -39,7 +43,12 @@ const buildItems = (generatedItems = [], scheduledDates = [], hasContent = true,
         day: item.day ?? i,
         content: hasContent ? content : null,
         image: hasImage ? (item.image_url || imageUrlForSeed(`marketingira-${i}`)) : null,
+        video: hasVideo ? (item.video_url || null) : null,
         scheduledAt,
+        // Preserve day_group_id from the generate-captions API response
+        // so it can be sent in the final-submit payload.
+        day_group_id: item.day_group_id,
+        post_ids: item.post_ids,
       };
     });
   }
@@ -50,26 +59,32 @@ const buildItems = (generatedItems = [], scheduledDates = [], hasContent = true,
     day: i,
     content: hasContent ? "" : null,
     image: hasImage ? imageUrlForSeed(`marketingira-${i}`) : null,
+    video: hasVideo ? fallbackVideo : null,
     scheduledAt: scheduledDates[i] || today.add(i, "day"),
+    day_group_id: null,
+    post_ids: null,
   }));
 };
 
 const StageFive = ({
   onBack,
+  onReset,
   dayCount = MAX_RANGE_DAYS,
   scheduledDates = [],
   postTypes = ["content", "image"],
   generatedItems = [],
 }) => {
   const { isdark } = useUserContext();
+  const router = useRouter();
   const [messageApi, messageContextHolder] = message.useMessage();
 
   const hasContent = postTypes.includes("content");
   const hasImage = postTypes.includes("image");
+  const hasVideo = postTypes.includes("video");
 
   const [stage] = useState(5);
   const [items] = useState(() =>
-    buildItems(generatedItems, scheduledDates, hasContent, hasImage)
+    buildItems(generatedItems, scheduledDates, hasContent, hasImage, hasVideo)
   );
   const [submitting, setSubmitting] = useState(false);
   const [modal, modalContextHolder] = Modal.useModal();
@@ -90,14 +105,37 @@ const StageFive = ({
         "This schedules every post for its date and time. You can still manage individual posts later from your dashboard.",
       okText: "Submit",
       cancelText: "Cancel",
-      onOk: () => {
+      onOk: async () => {
         setSubmitting(true);
-        // TODO: replace with your real "create schedule" API call
-        setTimeout(() => {
-          console.log({ stage, items });
-          setSubmitting(false);
+        try {
+          // Build the payload — only the day_group_id for each item
+          const payload = {
+            items: items.map((it) => ({
+              day_group_id: it.day_group_id,
+            })),
+          };
+
+          await apiFetch("posts/final-submit/", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+
           messageApi.success("All posts submitted successfully!");
-        }, 800);
+
+          // Reset to Stage 1 after a short delay so the user sees the toast
+          setTimeout(() => {
+            onReset?.();
+          }, 1200);
+        } catch (error) {
+          console.error("Final submit failed:", error);
+          const errRaw = error?.data;
+          const errResult = Array.isArray(errRaw) ? errRaw[0] ?? {} : errRaw ?? {};
+          const errMsg =
+            errResult?.message || error?.message || "Failed to submit posts";
+          messageApi.error(errMsg);
+        } finally {
+          setSubmitting(false);
+        }
       },
     });
   };
@@ -186,8 +224,27 @@ const StageFive = ({
                 </span>
               </div>
 
+              {/* Show video if available */}
+              {item.video ? (
+                <div className={`aspect-video overflow-hidden ${isdark ? "bg-[#1e293b]" : "bg-gray-100"}`}>
+                  <video
+                    src={item.video}
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : hasVideo ? (
+                /* Video selected but no URL yet — show placeholder */
+                <div className={`aspect-video flex flex-col items-center justify-center gap-2 ${isdark ? "bg-[#1e293b]" : "bg-gray-100"}`}>
+                  <FiVideo size={28} className={isdark ? "text-[#334155]" : "text-gray-300"} />
+                  <p className={`text-xs ${isdark ? "text-[#475569]" : "text-gray-400"}`}>
+                    Video not generated yet
+                  </p>
+                </div>
+              ) : null}
+
               {/* Show image if available */}
-              {item.image && (
+              {item.image && !item.video && (
                 <div className={`aspect-[4/3] overflow-hidden ${isdark ? "bg-[#1e293b]" : "bg-gray-100"}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

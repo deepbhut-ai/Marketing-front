@@ -2,12 +2,15 @@
 import React, { useMemo, useState } from "react";
 import { useUserContext } from "@/context/UserContext";
 import { FiCheck } from "react-icons/fi";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjsSetup";
 import StageOne from "./StageOne";
 import Stagetwo from "./Stagetwo";
 import StageThree from "./StageThree";
 import StageFour from "./StageFour";
 import StageFive from "./StageFive";
+import StageCombined from "./StageCombined";
+import StageVideo from "./StageVideo";
+import StageCombinedVideo from "./StageCombinedVideo";
 
 const MAX_RANGE_DAYS = 21;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -70,20 +73,43 @@ const CreatePost = () => {
 
   const dayCount = scheduledDates.length;
 
-  // ── Dynamic stage list (skip Content/Images based on postTypes) ──────
+  // ── Dynamic stage list ────────────────────────────────────────────────
+  // Post-type selection rules (enforced in Stagetwo's togglePostType):
+  //   content — can combine with image OR video
+  //   image   — can combine with content, NOT with video
+  //   video   — can combine with content, NOT with image
+  //
+  // Valid combinations and their stages:
+  //   content only        → Content
+  //   image only          → Images
+  //   video only          → Video
+  //   content + image     → Content & Image (combined)
+  //   content + video     → Content & Video (combined video)
   const hasContent = postTypes.includes("content");
   const hasImage = postTypes.includes("image");
+  const hasVideo = postTypes.includes("video");
+  const hasContentImage = hasContent && hasImage;
+  const hasContentVideo = hasContent && hasVideo;
 
   const stages = useMemo(() => {
     const list = [
       { id: "details", label: "Details", num: 1 },
       { id: "schedule", label: "Schedule", num: 2 },
     ];
-    if (hasContent) list.push({ id: "content", label: "Content", num: 3 });
-    if (hasImage) list.push({ id: "image", label: "Images", num: 4 });
-    list.push({ id: "review", label: "Review", num: 5 });
+    if (hasContentVideo) {
+      list.push({ id: "combined_video", label: "Content & Video", num: 3 });
+    } else if (hasContentImage) {
+      list.push({ id: "combined", label: "Content & Image", num: 3 });
+    } else if (hasVideo) {
+      list.push({ id: "video", label: "Video", num: 3 });
+    } else {
+      if (hasContent) list.push({ id: "content", label: "Content", num: 3 });
+      if (hasImage) list.push({ id: "image", label: "Images", num: 4 });
+    }
+    const lastNum = list[list.length - 1]?.num || 2;
+    list.push({ id: "review", label: "Review", num: lastNum + 1 });
     return list;
-  }, [hasContent, hasImage]);
+  }, [hasContent, hasImage, hasVideo, hasContentImage, hasContentVideo]);
 
   const currentStageId = stages[stageIndex]?.id;
 
@@ -92,6 +118,21 @@ const CreatePost = () => {
   const goBack = () => setStageIndex((i) => Math.max(i - 1, 0));
   const goTo = (idx) => {
     if (idx <= stageIndex) setStageIndex(idx);
+  };
+
+  // Reset the entire wizard back to Stage 1 with a clean slate —
+  // called after the final-submit API succeeds.
+  const handleReset = () => {
+    setStageIndex(0);
+    setTitle("");
+    setWebsite("");
+    setDescription("");
+    setGeneratedItems([]);
+    setScheduleRange(null);
+    setPostTypes(["content"]);
+    setActiveDays(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+    setPlatforms([]);
+    setTimezone("UTC");
   };
 
   // When postTypes change, clamp stageIndex so we don't land on a removed stage
@@ -151,6 +192,41 @@ const CreatePost = () => {
             description={description}
             postTypes={postTypes}
             setGeneratedItems={setGeneratedItems}
+            timezone={timezone}
+          />
+        )}
+
+        {currentStageId === "combined" && (
+          <StageCombined
+            onNext={goNext}
+            onBack={goBack}
+            stageNum={3}
+            dayCount={dayCount || 1}
+            scheduledDates={scheduledDates}
+            generatedItems={generatedItems}
+            title={title}
+            website={website}
+            description={description}
+            postTypes={postTypes}
+            setGeneratedItems={setGeneratedItems}
+            timezone={timezone}
+          />
+        )}
+
+        {currentStageId === "combined_video" && (
+          <StageCombinedVideo
+            onNext={goNext}
+            onBack={goBack}
+            stageNum={3}
+            dayCount={dayCount || 1}
+            scheduledDates={scheduledDates}
+            generatedItems={generatedItems}
+            title={title}
+            website={website}
+            description={description}
+            postTypes={postTypes}
+            setGeneratedItems={setGeneratedItems}
+            timezone={timezone}
           />
         )}
 
@@ -159,7 +235,6 @@ const CreatePost = () => {
             onNext={goNext}
             onBack={goBack}
             onBackToContent={() => {
-              // Jump back to the content stage (index of "content" in stages array)
               const contentIdx = stages.findIndex((s) => s.id === "content");
               if (contentIdx >= 0) setStageIndex(contentIdx);
             }}
@@ -172,12 +247,31 @@ const CreatePost = () => {
             description={description}
             postTypes={postTypes}
             setGeneratedItems={setGeneratedItems}
+            timezone={timezone}
+          />
+        )}
+
+        {currentStageId === "video" && (
+          <StageVideo
+            onNext={goNext}
+            onBack={goBack}
+            stageNum={3}
+            dayCount={dayCount || 1}
+            scheduledDates={scheduledDates}
+            generatedItems={generatedItems}
+            title={title}
+            website={website}
+            description={description}
+            postTypes={postTypes}
+            setGeneratedItems={setGeneratedItems}
+            timezone={timezone}
           />
         )}
 
         {currentStageId === "review" && (
           <StageFive
             onBack={goBack}
+            onReset={handleReset}
             dayCount={dayCount || 1}
             scheduledDates={scheduledDates}
             postTypes={postTypes}

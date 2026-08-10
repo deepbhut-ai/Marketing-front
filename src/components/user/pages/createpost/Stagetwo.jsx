@@ -3,15 +3,40 @@ import React, { useEffect, useState } from "react";
 import { useUserContext } from "@/context/UserContext";
 import { ConfigProvider, DatePicker, Select, message, theme } from "antd";
 const { RangePicker } = DatePicker;
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjsSetup";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 import { apiFetch } from "@/lib/apiClient";
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter, FaTiktok, FaYoutube } from "react-icons/fa6";
 
 const POST_TYPES = [
-  { value: "content", label: "Content Post" },
-  { value: "image", label: "Image Post" },
+  { value: "content", label: "Content" },
+  { value: "image", label: "Image" },
+  { value: "video", label: "Video" },
 ];
+
+// ---------------------------------------------------------------------------
+// Post-type selection rules
+// ---------------------------------------------------------------------------
+//   content — can combine with image OR video (but not both at once)
+//   image   — can combine with content, but NOT with video
+//   video   — can combine with content, but NOT with image
+//
+// Valid combinations:
+//   content only
+//   image only
+//   video only
+//   content + image
+//   content + video
+//
+// Invalid (blocked by togglePostType):
+//   image + video
+//   content + image + video
+// ---------------------------------------------------------------------------
+// "Conflicts" maps each type to the type it blocks (and vice-versa).
+const CONFLICTS = {
+  image: "video",
+  video: "image",
+};
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -180,13 +205,26 @@ const Stagetwo = ({
     return current.isBefore(today, "day") || current.isAfter(maxDate, "day");
   };
 
-  // At least one post type must always stay selected — block the toggle
-  // when it would remove the last remaining selection.
+  // Toggle a post type on/off, enforcing the conflict rules:
+  //   image ↔ video are mutually exclusive (selecting one removes the other)
+  //   content can combine with either image or video freely
+  //   At least one post type must always stay selected.
   const togglePostType = (value) => {
     setPostTypes((prev) => {
       const isActive = prev.includes(value);
-      if (isActive && prev.length === 1) return prev; // can't remove the last one
-      return isActive ? prev.filter((v) => v !== value) : [...prev, value];
+
+      if (isActive) {
+        // Can't remove the last one
+        if (prev.length === 1) return prev;
+        return prev.filter((v) => v !== value);
+      }
+
+      // Turning ON a new type — remove its conflict partner if present
+      const conflict = CONFLICTS[value];
+      const next = conflict
+        ? prev.filter((v) => v !== conflict)
+        : prev;
+      return [...next, value];
     });
   };
 
@@ -206,6 +244,19 @@ const Stagetwo = ({
       return;
     }
 
+    // Safety-net guards (also enforced in the RangePicker onChange):
+    //   1. From can't be in the past
+    //   2. To must be after From
+    const [from, to] = scheduleRange;
+    if (from && from.isBefore(dayjs(), "second")) {
+      messageApi.error("From date & time can't be in the past.");
+      return;
+    }
+    if (from && to && !to.isAfter(from, "second")) {
+      messageApi.error("To date & time must be after the From date & time.");
+      return;
+    }
+
     // Client-side guard: catch a range/active-day mismatch before ever
     // calling the API (e.g. range is Thu–Fri but only "Mon" is active).
     if (!rangeHasActiveDay(scheduleRange, activeDays)) {
@@ -215,11 +266,28 @@ const Stagetwo = ({
       return;
     }
 
+    // Send ISO-8601 format with "Z" suffix (e.g. "2026-08-10T04:04:00.000Z")
+    // but preserve the calendar day the user actually picked.
+    // Plain .toISOString() converts to real UTC, which shifts the date
+    // backward for non-UTC timezones (e.g. 10 Aug 04:04 IST → 09 Aug 22:34 UTC).
+    // Instead we treat the local wall-clock time as if it were UTC, so the
+    // API receives the same date/time the user sees on screen. The user's
+    // real timezone is sent separately in the `timezone` field so the
+    // backend can convert if needed.
+    const fromRaw = scheduleRange?.[0];
+    const toRaw = scheduleRange?.[1];
+    const from_date = fromRaw
+      ? dayjs.utc(fromRaw.format("YYYY-MM-DD HH:mm:ss")).toISOString()
+      : null;
+    const to_date = toRaw
+      ? dayjs.utc(toRaw.format("YYYY-MM-DD HH:mm:ss")).toISOString()
+      : null;
+
     const payload = {
       description,
       platforms,
-      from_date: scheduleRange?.[0]?.toISOString() || null,
-      to_date: scheduleRange?.[1]?.toISOString() || null,
+      from_date,
+      to_date,
       active_days: activeDays,
       timezone,
       post_types: postTypes,
@@ -299,7 +367,31 @@ const Stagetwo = ({
             </label>
             <RangePicker
               value={scheduleRange}
-              onChange={(value) => setScheduleRange(value)}
+              onChange={(value) => {
+                // value is null when the user clears the picker
+                if (!value) {
+                  setScheduleRange(null);
+                  return;
+                }
+
+                const [from, to] = value;
+
+                // Guard 1: "From" can't be before the current moment.
+                // We compare with second-level precision so a time picked
+                // a few seconds ago doesn't falsely trigger.
+                if (from && from.isBefore(dayjs(), "second")) {
+                  messageApi.error("From date & time can't be in the past.");
+                  return; // don't update state — picker keeps the old value
+                }
+
+                // Guard 2: "To" must be after "From" (date OR time difference).
+                if (from && to && !to.isAfter(from, "second")) {
+                  messageApi.error("To date & time must be after the From date & time.");
+                  return;
+                }
+
+                setScheduleRange(value);
+              }}
               showTime={{ format: "hh:mm A" }}
               format="DD MMM YYYY, hh:mm A"
               disabledDate={disabledDate}
@@ -377,7 +469,7 @@ const Stagetwo = ({
               })}
             </div>
             <p className={`text-xs mt-1.5 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
-              Select one or both — at least one post type must stay selected.
+              Content can combine with Image or Video. Image and Video can&apos;t be selected together.
             </p>
           </div>
 
