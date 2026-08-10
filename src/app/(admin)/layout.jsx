@@ -13,7 +13,7 @@ export default function UserLayout({ children }) {
         {/* Top Bar */}
         <AdminTopBar />
         {/* Page Content */}
-        <main className="container-page flex-1 overflow-y-auto bg-gray-50 p-5">
+        <main className="container-page page-scroll flex-1 overflow-y-auto bg-gray-50 p-5">
           {children}
         </main>
       </div>

@@ -1,11 +1,5 @@
-import Header from "@/components/user/header/Header";
-import Image from "next/image";
-import LoginLayout from "./(auth)/layout";
+import LandingPage from "@/components/landing/LandingPage";
 
 export default function Home() {
-  return (
-<>
-<LoginLayout/>
-</>
-  );
+  return <LandingPage />;
 }

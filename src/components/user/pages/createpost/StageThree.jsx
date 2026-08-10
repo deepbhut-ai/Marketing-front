@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useUserContext } from "@/context/UserContext";
 import { ConfigProvider, DatePicker, Modal, TimePicker, message, theme } from "antd";
-import dayjs from "dayjs";
+import dayjs from "@/lib/dayjsSetup";
 import { apiFetch } from "@/lib/apiClient";
 import {
   FiArrowLeft,
@@ -72,6 +72,7 @@ const StageThree = ({
   description,
   postTypes = [],
   setGeneratedItems,
+  timezone = "UTC",
 }) => {
   const { isdark } = useUserContext();
   const [messageApi, messageContextHolder] = message.useMessage();
@@ -128,6 +129,36 @@ const StageThree = ({
     setItems((prev) =>
       prev.map((it, idx) => (idx === currentIndex ? { ...it, ...patch } : it))
     );
+  };
+
+  // Update the scheduled time for the current day via the API.
+  // Called when the user changes the TimePicker.
+  const handleScheduleUpdate = async (newTime) => {
+    if (!current || !newTime) return;
+    const newScheduledAt = current.scheduledAt
+      .hour(newTime.hour())
+      .minute(newTime.minute());
+
+    // Optimistically update the UI
+    updateCurrent({ scheduledAt: newScheduledAt });
+
+    // Fire the API call — don't block the UI on it
+    if (current.day_group_id) {
+      try {
+        await apiFetch("posts/day-group/update-schedule/", {
+          method: "POST",
+          body: JSON.stringify({
+            day_group_id: current.day_group_id,
+            scheduled_time: newScheduledAt.format("YYYY-MM-DDTHH:mm:ss"),
+            timezone,
+          }),
+        });
+        messageApi.success("Schedule updated successfully");
+      } catch (error) {
+        const errResult = Array.isArray(error?.data) ? error.data[0] ?? {} : error?.data ?? {};
+        messageApi.error(errResult?.message || error?.message || "Failed to update schedule");
+      }
+    }
   };
 
   // Sync the current items back to CreatePost so StageFive sees updated
@@ -406,11 +437,7 @@ const StageThree = ({
                     value={current.scheduledAt}
                     onChange={(value) => {
                       if (!value) return;
-                      updateCurrent({
-                        scheduledAt: current.scheduledAt
-                          .hour(value.hour())
-                          .minute(value.minute()),
-                      });
+                      handleScheduleUpdate(value);
                     }}
                     format="hh:mm A"
                     allowClear={false}
@@ -443,13 +470,9 @@ const StageThree = ({
                   type="button"
                   onClick={handleUpdate}
                   disabled={regenerating}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border transition-colors ${
-                    isdark
-                      ? "border-gray-600 text-white hover:bg-[#0f172a]"
-                      : "border-gray-200 text-[#475569] hover:bg-gray-50"
-                  }`}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#8b5cf6] hover:bg-[#7c3aed] transition-colors disabled:opacity-50 whitespace-nowrap"
                 >
-                  <FiRefreshCw size={14} className={regenerating ? "animate-spin" : ""} />
+                  <FiRefreshCw size={14} className={regenerating ? "animate-spin shrink-0" : "shrink-0"} />
                   {regenerating ? "Regenerating..." : "Regenerate"}
                 </button>
                 <button

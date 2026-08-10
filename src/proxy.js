@@ -48,12 +48,25 @@ export default async function proxy(request) {
     return NextResponse.next();
   }
 
+  // Landing page (root "/") is always public — logged-out visitors
+  // see the marketing landing; logged-in ones still get redirected to
+  // their dashboard below via Case 4.
+  const isLanding = pathname === '/';
+
   // Case 2 — everything else (user area + admin area): no session →
-  // send to login, remembering where they were headed.
-  if (!hasSession) {
+  // send to login, remembering where they were headed. The landing
+  // page is exempt so visitors can see the marketing site.
+  if (!hasSession && !isLanding) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Case 2b — already logged in and hitting the landing page →
+  // bounce to the dashboard instead of showing the marketing page.
+  if (hasSession && isLanding) {
+    const dest = role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    return NextResponse.redirect(new URL(dest, request.url));
   }
 
   // Case 3 — logged in, but a non-admin hitting an admin route.
