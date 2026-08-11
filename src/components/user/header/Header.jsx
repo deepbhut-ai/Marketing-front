@@ -17,8 +17,8 @@ import { usePathname } from "next/navigation";
 const menuItems = [
   { label: "Dashboard",linknav:"/dashboard", icon: BiHomeAlt,  },
   { label: "Create Post",linknav:"/create-post", icon: BiHomeAlt,  },
-  { label: "Contact",linknav:"/contact", icon: BiGrid },
-  { label: "Analytics", linknav:"/analytics", icon: VscGraph },
+  { label: "Upcoming Posts",linknav:"/contact", icon: BiGrid },
+  { label: "Post History", linknav:"/post-history", icon: VscGraph },
   { label: "Assets", linknav:"/assets", icon: BsImage },
   { label: "Brands", linknav:"/brands", icon: FiEdit },
   // { label: "Platforms",linknav:"/platforms", icon: LuLayoutGrid },
@@ -64,7 +64,7 @@ const pathname = usePathname();
               const link = (
                 <Link
                   href={`${linknav}`}
-                  className={` flex items-center gap-2 ${
+                  className={` flex items-center gap-2 px-2 py-1 ${
                     sidebarOpen ? "" : "justify-center"
                   } ${ isactive ? "text-[#8b5cf6]" : ""}`}
                 >
@@ -92,7 +92,7 @@ const pathname = usePathname();
               return (
                 <li
                   key={label}
-                  className={`${isactive && "navli"} navnor rounded-sm  px-2 py-1 text-gray-500 ${
+                  className={`${isactive && "navli"} navnor rounded-sm   text-gray-500 ${
                     isactive && sidebarOpen ? "" : ""
                   }`}
                 >
@@ -143,7 +143,7 @@ const pathname = usePathname();
               const link = (
                 <Link
                   href={`${linknav}`}
-                  className={`flex items-center gap-2 ${
+                  className={`flex items-center gap-2 px-2 py-1 ${
                     isactive ? "text-[#8b5cf6]" : ""
                   }`}
                 >
@@ -164,7 +164,7 @@ const pathname = usePathname();
               return (
                 <li
                   key={label}
-                  className={`${isactive && "navli"} navnor  px-2 py-1 text-gray-500`}
+                  className={`${isactive && "navli"} navnor   text-gray-500`}
                 >
                   {link}
                 </li>

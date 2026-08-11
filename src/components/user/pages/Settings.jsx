@@ -3,9 +3,10 @@ import { useUserContext } from "@/context/UserContext";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { MdOutlineKeyboardArrowRight } from "react-icons/md";
-import { FiKey, FiSave } from "react-icons/fi";
+import { FiKey, FiSave, FiTrash2 } from "react-icons/fi";
+import { LuCopy, LuCheckCheck, LuMonitor } from "react-icons/lu";
 import { apiFetch, hydrateSession } from "@/lib/apiClient";
-import { ConfigProvider, Select, message, theme } from "antd";
+import { ConfigProvider, Modal, Select, message, theme } from "antd";
 
 // Replace with your API data
 const PROFILE = {
@@ -44,6 +45,12 @@ const Settings = () => {
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [geminiError, setGeminiError] = useState("");
   const [geminiSuccess, setGeminiSuccess] = useState("");
+
+  // Agent token state
+  const [agentToken, setAgentToken] = useState(null); // { token, device_name, is_online, created_at }
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [tokenGenerating, setTokenGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const heading = isdark ? "text-white" : "text-[#111827]";
   const muted = isdark ? "text-[#94a3b8]" : "text-[#64748b]";
@@ -102,6 +109,15 @@ const Settings = () => {
         } catch {
           // models list fetch failed — dropdowns will be empty
         }
+
+        // 3. Fetch agent token — call POST to get or create token
+        try {
+          const tokenData = await apiFetch("agent/token/", { method: "POST" });
+          if (!mounted) return;
+          if (tokenData?.data?.token) setAgentToken(tokenData.data);
+        } catch {
+          // token fetch failed — user can retry via Generate button
+        }
       } catch (err) {
         const errData = err?.data;
         const errMsg =
@@ -115,6 +131,57 @@ const Settings = () => {
       mounted = false;
     };
   }, []);
+
+  // ── Agent token handlers ───────────────────────────────────────────
+  const handleGenerateToken = async () => {
+    setTokenGenerating(true);
+    try {
+      const data = await apiFetch("agent/token/", { method: "POST" });
+      const d = data?.data || {};
+      setAgentToken(d);
+      messageApi.success(data?.message || "Agent token generated successfully!");
+    } catch (err) {
+      const errMsg = err?.data?.message || err?.message || "Failed to generate agent token.";
+      messageApi.error(errMsg);
+    } finally {
+      setTokenGenerating(false);
+    }
+  };
+
+  const handleCopyToken = async () => {
+    if (!agentToken?.token) return;
+    try {
+      await navigator.clipboard.writeText(agentToken.token);
+      setCopied(true);
+      messageApi.success("Token copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      messageApi.error("Failed to copy token.");
+    }
+  };
+
+  const handleRemoveToken = () => {
+    Modal.confirm({
+      title: "Remove Agent Token",
+      content: "Are you sure you want to remove this agent token? You will need to generate a new one to reconnect.",
+      okText: "Remove",
+      okButtonProps: { danger: true },
+      cancelText: "Cancel",
+      onOk: async () => {
+        setTokenLoading(true);
+        try {
+          await apiFetch("agent/token/", { method: "DELETE" });
+          setAgentToken(null);
+          messageApi.success("Agent token removed successfully!");
+        } catch (err) {
+          const errMsg = err?.data?.message || err?.message || "Failed to remove agent token.";
+          messageApi.error(errMsg);
+        } finally {
+          setTokenLoading(false);
+        }
+      },
+    });
+  };
 
   const handleModelChange = async (newImageModel, newVideoModel) => {
     setGeminiError("");
@@ -485,6 +552,125 @@ const Settings = () => {
         )}
         {geminiSuccess && (
           <p className="mt-4 text-sm text-[#22c55e]">{geminiSuccess}</p>
+        )}
+      </div>
+
+      {/* ---------- Agent Token section ---------- */}
+      <div
+        className={`max-w-[1060px] mx-auto rounded-lg p-6 sm:p-8 mt-6 ${
+          isdark ? "bg-[#1e293b]" : "bg-white shadow-sm"
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <span className="text-[#8b5cf6]">
+            <LuMonitor size={22} />
+          </span>
+          <h5 className={`text-xl font-bold ${heading}`}>Agent Token</h5>
+        </div>
+        <p className={`mt-1 text-sm ${muted}`}>
+          Use this token to connect the MarketingIRA desktop agent to your account.
+        </p>
+
+        {agentToken?.token ? (
+          <>
+            {/* token display */}
+            <div className="mt-5">
+              <label className={labelCls}>Your Agent Token</label>
+              <div className="flex gap-3 items-stretch">
+                <div
+                  className={`flex-1 flex items-center rounded-md border px-4 py-3 text-sm font-mono break-all ${
+                    isdark
+                      ? "bg-[#0f172a] border-[#334155] text-[#cbd5e1]"
+                      : "bg-[#f8fafc] border-[#e2e8f0] text-[#475569]"
+                  }`}
+                >
+                  {agentToken.token}
+                </div>
+                <button
+                  onClick={handleCopyToken}
+                  className={`shrink-0 px-4 py-3 rounded-md flex items-center gap-2 text-sm font-medium transition-colors ${
+                    copied
+                      ? "bg-[#22c55e] text-white"
+                      : "bg-[#8b5cf6] text-white hover:bg-[#7c3aed]"
+                  }`}
+                >
+                  {copied ? <LuCheckCheck size={18} /> : <LuCopy size={18} />}
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+
+            {/* token meta */}
+            <div className={`mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4`}>
+              <div className={`rounded-md border px-4 py-3 ${
+                isdark ? "border-[#334155] bg-[#0f172a]/50" : "border-[#e2e8f0] bg-[#f8fafc]"
+              }`}>
+                <p className={`text-xs ${muted}`}>Device Name</p>
+                <p className={`text-sm font-medium ${isdark ? "text-white" : "text-[#374151]"}`}>
+                  {agentToken.device_name || "—"}
+                </p>
+              </div>
+              <div className={`rounded-md border px-4 py-3 ${
+                isdark ? "border-[#334155] bg-[#0f172a]/50" : "border-[#e2e8f0] bg-[#f8fafc]"
+              }`}>
+                <p className={`text-xs ${muted}`}>Status</p>
+                <p className={`text-sm font-medium flex items-center gap-1.5 ${
+                  agentToken.is_online ? "text-[#22c55e]" : isdark ? "text-[#94a3b8]" : "text-[#64748b]"
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${
+                    agentToken.is_online ? "bg-[#22c55e]" : "bg-[#94a3b8]"
+                  }`} />
+                  {agentToken.is_online ? "Online" : "Offline"}
+                </p>
+              </div>
+              <div className={`rounded-md border px-4 py-3 ${
+                isdark ? "border-[#334155] bg-[#0f172a]/50" : "border-[#e2e8f0] bg-[#f8fafc]"
+              }`}>
+                <p className={`text-xs ${muted}`}>Created At</p>
+                <p className={`text-sm font-medium ${isdark ? "text-white" : "text-[#374151]"}`}>
+                  {agentToken.created_at
+                    ? new Date(agentToken.created_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* remove button */}
+            <button
+              onClick={handleRemoveToken}
+              disabled={tokenLoading}
+              className="flex items-center gap-2 mt-6 px-5 py-3 rounded-md text-sm font-medium text-white bg-[#ef4444] hover:bg-[#dc2626] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <FiTrash2 size={16} /> {tokenLoading ? "Removing..." : "Remove Token"}
+            </button>
+          </>
+        ) : (
+          /* no token state */
+          <div className="mt-5">
+            <div
+              className={`rounded-md border px-4 py-3 text-sm ${
+                isdark
+                  ? "border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#fbbf24]"
+                  : "border-[#f59e0b]/30 bg-[#fff7ed] text-[#b45309]"
+              }`}
+            >
+              No agent token generated yet. Click below to generate one.
+            </div>
+            <button
+              onClick={handleGenerateToken}
+              disabled={tokenGenerating}
+              className="flex items-center gap-2 mt-4 px-5 py-3 rounded-md bg-[#8b5cf6] text-white text-sm font-medium cursor-pointer hover:bg-[#7c3aed] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <LuMonitor size={16} /> {tokenGenerating ? "Generating..." : "Generate Token"}
+            </button>
+          </div>
         )}
       </div>
     </div>

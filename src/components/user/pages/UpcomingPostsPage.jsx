@@ -5,20 +5,13 @@ import {
   MdOutlineFilterAlt,
   MdOutlineKeyboardArrowRight,
 } from "react-icons/md";
-import { BiBarChartAlt2, BiCommentDetail, BiLike } from "react-icons/bi";
+import { BiCalendarEvent } from "react-icons/bi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import { CgSearch } from "react-icons/cg";
 import { ConfigProvider, Select, theme } from "antd";
 import { FaAngleDown } from "react-icons/fa";
 import AnalylicsTable from "../sections/AnalylicsTable";
 import { apiFetch } from "@/lib/apiClient";
-
-const STATUS_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "posted", label: "Posted" },
-  { value: "failed", label: "Failed" },
-];
 
 const PLATFORM_OPTIONS = [
   { value: "", label: "All" },
@@ -28,7 +21,7 @@ const PLATFORM_OPTIONS = [
   { value: "twitter", label: "Twitter / X" },
 ];
 
-const AnalyticsPage = () => {
+const UpcomingPostsPage = () => {
   const { isdark } = useUserContext();
   const [openFilter, setopenFilter] = useState(false);
   const filterRef = useRef(null);
@@ -41,23 +34,21 @@ const AnalyticsPage = () => {
   const [total, setTotal] = useState(0);
   const [pageSize] = useState(10);
 
-  // ── Filter state — defaults to "All" (empty string) ────────────────
-  const [statusFilter, setStatusFilter] = useState("");
+  // ── Filter state ───────────────────────────────────────────────────
   const [platformFilter, setPlatformFilter] = useState("");
   const [keyword, setKeyword] = useState("");
 
   const fetchPosts = useCallback(
-    async (pageNum = 1, status = statusFilter, platform = platformFilter) => {
+    async (pageNum = 1, platform = platformFilter) => {
       setLoading(true);
       try {
         const query = new URLSearchParams({
-          status: status || "",
-          platform: platform || "",
           page: String(pageNum),
           page_size: String(pageSize),
-        }).toString();
+        });
+        if (platform) query.set("platform", platform);
 
-        const data = await apiFetch(`posts/list/?${query}`);
+        const data = await apiFetch(`posts/scheduled/?${query.toString()}`);
         const items = data?.data || [];
         const pagination = data?.pagination || {};
 
@@ -73,13 +64,13 @@ const AnalyticsPage = () => {
         setTotalPages(pagination.total_pages || 1);
         setPage(pagination.page || pageNum);
       } catch (error) {
-        console.error("Fetch posts failed:", error);
+        console.error("Fetch scheduled posts failed:", error);
         setPosts([]);
       } finally {
         setLoading(false);
       }
     },
-    [statusFilter, platformFilter, pageSize, keyword]
+    [platformFilter, pageSize, keyword]
   );
 
   // Fetch on mount and when page changes
@@ -104,22 +95,20 @@ const AnalyticsPage = () => {
 
   const handleSearch = () => {
     setPage(1);
-    fetchPosts(1, statusFilter, platformFilter);
+    fetchPosts(1, platformFilter);
     setopenFilter(false);
   };
 
-  // Reset all filters to "All" and re-fetch
   const handleClear = () => {
-    setStatusFilter("");
     setPlatformFilter("");
     setKeyword("");
     setPage(1);
-    fetchPosts(1, "", "");
+    fetchPosts(1, "");
     setopenFilter(false);
   };
 
   const handleRefresh = () => {
-    fetchPosts(page, statusFilter, platformFilter);
+    fetchPosts(page, platformFilter);
   };
 
   const handlePageChange = (newPage) => {
@@ -132,7 +121,7 @@ const AnalyticsPage = () => {
         className={`flex items-center gap-2 text-sm ${isdark ? "text-[#64748b]" : "text-[#64748b]"}`}
       >
         <span className="text-[#8b5cf6]">User</span>{" "}
-        <MdOutlineKeyboardArrowRight /> <span>Post History</span>
+        <MdOutlineKeyboardArrowRight /> <span>Upcoming Posts</span>
       </div>
 
       {/* Stat cards */}
@@ -140,31 +129,35 @@ const AnalyticsPage = () => {
         <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 w-full`}>
           <div className={`flex gap-2 shadow-sm rounded-xl p-5 ${isdark ? "bg-[#1e293b]" : "bg-white"}`}>
             <div className="p-3 flex justify-center items-center bg-[#8b5cf61a] text-[#8b5cf6] rounded-xl">
-              <BiBarChartAlt2 size={24} />
+              <BiCalendarEvent size={24} />
             </div>
             <div>
-              <p className={`text-[#64748b]`}>Total Posts</p>
+              <p className={`text-[#64748b]`}>Scheduled Posts</p>
               <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
                 {total}
               </h6>
             </div>
           </div>
           <div className={`flex gap-2 shadow-sm rounded-xl p-5 ${isdark ? "bg-[#1e293b]" : "bg-white"}`}>
-            <div className="p-3 flex justify-center items-center bg-[#10b9811a] text-[#10b981] rounded-xl">
-              <BiLike size={24} />
+            <div className="p-3 flex justify-center items-center bg-[#f59e0b1a] text-[#f59e0b] rounded-xl">
+              <BiCalendarEvent size={24} />
             </div>
             <div>
-              <p className={`text-[#64748b]`}>Total Reactions</p>
-              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>0</h6>
+              <p className={`text-[#64748b]`}>Pending</p>
+              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
+                {posts.filter((p) => p.status === "pending").length}
+              </h6>
             </div>
           </div>
           <div className={`flex gap-2 shadow-sm rounded-xl p-5 ${isdark ? "bg-[#1e293b]" : "bg-white"}`}>
-            <div className="p-3 flex justify-center items-center bg-[#f59e0b1a] text-[#f59e0b] rounded-xl">
-              <BiCommentDetail size={24} />
+            <div className="p-3 flex justify-center items-center bg-[#10b9811a] text-[#10b981] rounded-xl">
+              <BiCalendarEvent size={24} />
             </div>
             <div>
-              <p className={`text-[#64748b]`}>Total Comments</p>
-              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>0</h6>
+              <p className={`text-[#64748b]`}>Total Pages</p>
+              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
+                {totalPages}
+              </h6>
             </div>
           </div>
         </div>
@@ -241,24 +234,6 @@ const AnalyticsPage = () => {
                       placeholder="Select platform"
                       options={PLATFORM_OPTIONS}
                     />
-                    <label className={`block mb-1 mt-3 text-sm ${isdark ? "text-white" : ""}`}>
-                      Status
-                    </label>
-                    <Select
-                      className="selectSet w-full"
-                      value={statusFilter}
-                      onChange={setStatusFilter}
-                      classNames={{
-                        popup: { root: isdark ? "darkSelectDropdown" : "lightSelectDropdown" },
-                      }}
-                      getPopupContainer={() => filterRef.current}
-                      showSearch
-                      filterOption={(input, option) =>
-                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                      }
-                      placeholder="Select status"
-                      options={STATUS_OPTIONS}
-                    />
                   </ConfigProvider>
                   <div className="flex items-center gap-2 mt-3">
                     <button
@@ -297,4 +272,4 @@ const AnalyticsPage = () => {
   );
 };
 
-export default AnalyticsPage;
+export default UpcomingPostsPage;
