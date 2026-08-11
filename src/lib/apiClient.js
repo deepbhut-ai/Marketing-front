@@ -61,11 +61,14 @@ function goToLogin() {
  * proxied through this app's own /api routes.
  */
 export async function apiFetch(path, options = {}) {
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
   const doRequest = (token) =>
     fetch(`${API_BASE}${path}`, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        // Let the browser set the correct multipart boundary for FormData
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },

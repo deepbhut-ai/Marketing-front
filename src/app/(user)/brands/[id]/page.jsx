@@ -1,10 +1,7 @@
-import BrandEditPage from '@/components/user/pages/BrandEditPage'
-import React from 'react'
+import { redirect } from 'next/navigation'
 
 const Page = () => {
-  return (
-    <div> <BrandEditPage/> </div>
-  )
+  redirect('/brands')
 }
 
 export default Page

@@ -1,9 +1,9 @@
-import ContentPage from '@/components/user/pages/ContentPage'
+import UpcomingPostsPage from '@/components/user/pages/UpcomingPostsPage'
 import React from 'react'
 
 const Page = () => {
   return (
-    <div><ContentPage/></div>
+    <div><UpcomingPostsPage/></div>
   )
 }
 

@@ -1,68 +1,92 @@
 "use client";
 import { useUserContext } from "@/context/UserContext";
-import Image from "next/image";
-import React, { useState } from "react";
-import { BsThreeDotsVertical } from "react-icons/bs";
-import { FaRegFile, FaRegTrashAlt } from "react-icons/fa";
-import { RiEdit2Fill } from "react-icons/ri";
+import React from "react";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import AssetCard from "./AssetCard";
 
-const Aiassets = () => {
-      const { isdark } = useUserContext();
-      const [openeActionModel, setOpenActionModel] = useState(null);
+const Pagination = ({ page, totalPages, onPageChange, isdark }) => {
+  if (totalPages <= 1) return null;
   return (
-     <div>
-         <div
-           className={`grid grid-cols-1 justify-items-center  md:grid-cols-2 lg:grid-cols-3  xl:grid-cols-4 gap-5 mt-5`}
-         >
-           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((item) => {
-             const isOpen = openeActionModel === item;
-             return (
-               <div
-                 key={item}
-                 className={`h-72  w-[15rem] relative rounded-xl shadow-sm border  ${isdark ? "bg-[#0f172a7e] border border-gray-600" : "bg-white border-gray-300"} `}
-               >
-                 <div>
-                   <Image
-                     src={"/images/demo.jpeg"}
-                     className={`w-full rounded-t-xl h-60`}
-                     alt=""
-                     width={100}
-                     height={100}
-                   />
-                 </div>
-                 <div
-                   className={`flex justify-end items-center px-2 gap-1 py-3 ${isdark ? "text-white" : ""}`}
-                 >
-                   <FaRegFile /> 1.00 MB
-                 </div>
-                 <div
-                   onClick={() => setOpenActionModel(isOpen ? null : item)}
-                   className={`h-8 w-8 cursor-pointer  absolute top-1 right-1 flex justify-center items-center  rounded-full ${isdark ? "bg-[#1e293b] text-white" : "bg-white"}`}
-                 >
-                   <BsThreeDotsVertical />
-                 </div>
-                 {isOpen && (
-                   <div
-                     className={` absolute rounded-xl px-3 py-2 top-10 right-1 ${isdark ? "bg-[#1e293b] text-white" : "bg-white text-[#374151]"}`}
-                   >
-                     <ul>
-                       <li
-                         className={`flex cursor-pointer gap-2 items-center text-sm pb-1 mb-1  ${isdark ? "" : ""}`}
-                       >
-                         <RiEdit2Fill /> Edit
-                       </li>
-                       <li className="flex gap-2 items-center text-sm cursor-pointer">
-                         <FaRegTrashAlt /> Delete
-                       </li>
-                     </ul>
-                   </div>
-                 )}
-               </div>
-             );
-           })}
-         </div>
-       </div>
-  )
-}
+    <div className="flex items-center justify-center gap-2 py-4">
+      <button
+        onClick={() => onPageChange?.(page - 1)}
+        disabled={page <= 1}
+        className={`flex items-center justify-center w-8 h-8 rounded-md border text-sm transition-colors disabled:opacity-40 ${
+          isdark
+            ? "border-gray-600 text-white hover:bg-[#0f172a]"
+            : "border-gray-200 text-[#475569] hover:bg-gray-50"
+        }`}
+      >
+        <FiChevronLeft size={16} />
+      </button>
+      <span className={`text-sm ${isdark ? "text-[#94a3b8]" : "text-[#475569]"}`}>
+        Page {page} of {totalPages}
+      </span>
+      <button
+        onClick={() => onPageChange?.(page + 1)}
+        disabled={page >= totalPages}
+        className={`flex items-center justify-center w-8 h-8 rounded-md border text-sm transition-colors disabled:opacity-40 ${
+          isdark
+            ? "border-gray-600 text-white hover:bg-[#0f172a]"
+            : "border-gray-200 text-[#475569] hover:bg-gray-50"
+        }`}
+      >
+        <FiChevronRight size={16} />
+      </button>
+    </div>
+  );
+};
 
-export default Aiassets
+const Aiassets = ({
+  assets = [],
+  loading = false,
+  deletingId = null,
+  onDelete,
+  onEdit,
+  onToggleFavorite,
+  page = 1,
+  totalPages = 1,
+  onPageChange,
+}) => {
+  const { isdark } = useUserContext();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20 text-sm text-[#94a3b8]">
+        Loading AI assets...
+      </div>
+    );
+  }
+
+  if (assets.length === 0) {
+    return (
+      <div className="flex justify-center items-center py-20 text-sm text-[#94a3b8]">
+        No AI generated assets found.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 justify-items-center md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-5">
+        {assets.map((asset) => (
+          <AssetCard
+            key={asset.id}
+            asset={asset}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onToggleFavorite={onToggleFavorite}
+          />
+        ))}
+      </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        isdark={isdark}
+      />
+    </div>
+  );
+};
+
+export default Aiassets;
