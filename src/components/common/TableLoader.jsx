@@ -1,17 +1,17 @@
 "use client";
 
-import styles from "./Pageloader.module.css";
-import { useUserContext } from "@/context/UserContext"; // adjust path to wherever your context lives
+import styles from "./TableLoader.module.css";
+import { useUserContext } from "@/context/UserContext";
 
 /**
- * Full-screen page loader.
- * - Icons are fixed in place and pulse (grow/shrink).
- * - A gradient "snake" trail continuously loops around the icons,
- *   swelling out near LinkedIn / WhatsApp / Facebook / Instagram / X
- *   and skipping past YouTube.
- * - Colors switch between light/dark using isdark from useUserContext().
+ * TableLoader — inline loader using the same orbit/snake animation
+ * as the full-screen PageLoader, but sized to fit inside table areas.
+ *
+ * Props:
+ *   columns  — number of columns (unused, kept for API compatibility)
+ *   rows     — number of rows (unused, kept for API compatibility)
  */
-export default function PageLoader() {
+export default function TableLoader({ columns, rows }) {
   const { isdark } = useUserContext();
 
   const loopPath =
@@ -23,7 +23,7 @@ export default function PageLoader() {
         <div className={styles.orbit}>
           <svg className={styles.loopSvg} viewBox="0 0 170 170">
             <defs>
-              <linearGradient id="snakeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient id="tableSnakeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" style={{ stopColor: "var(--purple)" }} />
                 <stop offset="50%" style={{ stopColor: "var(--pink)" }} />
                 <stop offset="100%" style={{ stopColor: "var(--teal)" }} />
@@ -84,7 +84,7 @@ export default function PageLoader() {
           <div className={`${styles.iconSlot} ${styles.slot6}`}>
             <div className={styles.iconBubble}>
               <svg viewBox="0 0 24 24" fill="white">
-                <path d="M17.5 3.5A8.5 8.5 0 0 0 5.4 15L4 20l5.1-1.4a8.5 8.5 0 0 0 12.2-7.5 8.44 8.44 0 0 0-3.8-7.6ZM12 19.1a7 7 0 0 1-3.6-1l-.26-.16-3 .8.8-2.9-.17-.28A7.05 7.05 0 1 1 19.1 12 7.06 7.06 0 0 1 12 19.1Zm3.9-5.3c-.2-.1-1.2-.6-1.4-.7-.2-.1-.34-.1-.48.1-.14.2-.55.7-.68.85-.12.14-.25.16-.46.05-.2-.1-.87-.32-1.66-1.02-.6-.55-1.02-1.22-1.14-1.43-.12-.2 0-.32.1-.42.1-.1.2-.25.3-.37.1-.13.14-.2.2-.34.06-.14.03-.27-.02-.37-.05-.1-.48-1.15-.66-1.58-.17-.4-.35-.35-.48-.36h-.4c-.14 0-.37.05-.56.27-.2.2-.73.72-.73 1.75s.75 2.03.86 2.17c.1.14 1.47 2.24 3.56 3.14.5.22.88.34 1.19.44.5.16.95.14 1.3.08.4-.06 1.2-.5 1.37-.97.17-.48.17-.9.12-.98-.05-.1-.18-.15-.38-.24Z" />
+                <path d="M17.5 3.5A8.5 8.5 0 0 0 5.4 15L4 20l5.1-1.4a8.5 8.5 0 0 0 12.2-7.5 8.44 8.44 0 0 0-3.8-7.6ZM12 19.1a7 7 0 0 1-3.6-1l-.26-.16-3 .8.8-2.9-.17-.28A7.05 7.05 0 1 1 19.1 12 7.06 7.06 0 0 1 12 19.1Zm3.9-5.3c-.2-.1-1.2-.6-1.4-.7-.2-.1-.34-.1-.48.1-.14.2-.55.7-.67.84-.12.14-.25.16-.45.05-.2-.1-.87-.32-1.66-1.02-.6-.55-1.02-1.22-1.14-1.43-.12-.2 0-.32.1-.42.1-.1.2-.25.3-.37.1-.13.14-.22.2-.34.06-.14.03-.25-.02-.37-.05-.1-.48-1.15-.66-1.58-.17-.4-.35-.35-.48-.36h-.4c-.14 0-.37.05-.56.27-.2.2-.73.72-.73 1.75s.75 2.03.85 2.17c.1.14 1.47 2.24 3.56 3.14.5.22.88.35 1.19.44.5.16.96.14 1.32.08.4-.06 1.2-.5 1.37-.97.17-.48.17-.9.12-.97-.05-.1-.18-.15-.38-.24Z" />
               </svg>
             </div>
           </div>
@@ -93,8 +93,7 @@ export default function PageLoader() {
         </div>
 
         <div>
-          <div className={styles.loaderBrand}>MarketingIRA</div>
-          <div className={styles.loaderText}>Connecting your platforms...</div>
+          <div className={styles.loaderText}>Loading... MarketingIRA</div>
         </div>
       </div>
     </div>

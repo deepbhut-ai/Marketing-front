@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useRef } from "react";
+import React from "react";
 import { BiGrid, BiHomeAlt } from "react-icons/bi";
 import { BsImage, BsTools } from "react-icons/bs";
 import { FiEdit, FiPhoneCall } from "react-icons/fi";
@@ -23,7 +23,7 @@ const menuItems = [
   { label: "Brands", linknav:"/brands", icon: FiEdit },
   // { label: "Platforms",linknav:"/platforms", icon: LuLayoutGrid },
   // { label: "AI Tools", linknav:"/ai-tools", icon: BsTools },
-  { label: "AI Generated History", linknav:"/ai-generated-history", icon: PiCubeTransparent },
+  { label: "Credit Log History", linknav:"/ai-generated-history", icon: PiCubeTransparent },
   // { label: "Logs", linknav:"/logs", icon: LuTimerReset },
   // { label: "QA Dataset", linknav:"/qa-replies", icon: GoNote },
   // { label: "AI Training", linknav:"/ai-training", icon: TbDeviceImacCode },
@@ -35,10 +35,9 @@ const menuItems = [
 ];
 
 const Header = () => {
-  const { sidebarOpen, isdark, handelDrakmode, openMobileNav, setOpenMobileNav } =
+  const { sidebarOpen, isdark, handleDarkMode, openMobileNav, setOpenMobileNav } =
     useUserContext();
 const pathname = usePathname();
-  const mobileNavRef = useRef(null);
   
   return (
     <div className="header-main flex relative">
@@ -120,7 +119,6 @@ const pathname = usePathname();
 
       {/* Mobile nav — always mounted, slides in/out via transform for a smooth animation */}
       <div
-        ref={mobileNavRef}
         className={`side-bar fixed top-0 left-0 z-50 shadow-md h-dvh flex flex-col overflow-hidden
           w-56 transition-transform duration-300 ease-in-out will-change-transform
           ${openMobileNav ? "translate-x-0" : "-translate-x-full"}

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
  * Route gating for the whole app.
  * --------------------------------------------------------------
  * File MUST be named `proxy.js` at `src/proxy.js`.
- * This replaces the deprecated `middleware.js` convention.
+ * This file serves as the Next.js middleware (proxy.js in Next.js 16+).
  *
  * Paths below match the actual folder structure:
  *   (auth)/forgotpassword  -> /forgotpassword   (no hyphen!)
@@ -23,7 +23,7 @@ import { NextResponse } from 'next/server';
  * --------------------------------------------------------------
  */
 
-const AUTH_PATHS = ['/login', '/register', '/forgotpassword', '/forgot-password', '/verify-otp'];
+const AUTH_PATHS = ['/login', '/register', '/forgotpassword', '/verify-otp'];
 
 function isUnderPath(pathname, base) {
   return pathname === base || pathname.startsWith(`${base}/`);

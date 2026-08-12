@@ -167,7 +167,7 @@ const BrandsCreatePage = () => {
 
   const handleSubmit = async () => {
     if (!form.brand_name.trim()) {
-      message.warning("Please enter a brand name.");
+      messageApi.warning("Please enter a brand name.");
       return;
     }
     setSubmitting(true);
@@ -187,13 +187,13 @@ const BrandsCreatePage = () => {
         body: formData,
       });
 
-      message.success("Brand created successfully!");
+      messageApi.success("Brand created successfully!");
       setTimeout(() => {
         window.location.href = "/brands";
       }, 1000);
     } catch (err) {
       console.error("Create brand error:", err);
-      message.error(err?.message || "Failed to create brand.");
+      messageApi.error(err?.message || "Failed to create brand.");
     } finally {
       setSubmitting(false);
     }

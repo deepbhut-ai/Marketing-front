@@ -1,6 +1,6 @@
 "use client";
 import { useUserContext } from "@/context/UserContext";
-import { ConfigProvider, Modal, Select, message, theme } from "antd";
+import { ConfigProvider, message, Modal, theme } from "antd";
 import Link from "next/link";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { CgSearch } from "react-icons/cg";
@@ -13,6 +13,7 @@ import {
 } from "react-icons/md";
 import { apiFetch } from "@/lib/apiClient";
 import BrandsTable from "../sections/BrandsTable";
+import DateRangePicker from "../sections/DateRangePicker";
 
 const BrandsPage = () => {
   const { isdark } = useUserContext();
@@ -29,10 +30,12 @@ const BrandsPage = () => {
 
   // ── Filter state ───────────────────────────────────────────────────
   const [keyword, setKeyword] = useState("");
-  const [industry, setIndustry] = useState("");
+  const [dateRange, setDateRange] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   const fetchBrands = useCallback(
-    async (pageNum = 1, search = keyword, ind = industry) => {
+    async (pageNum = 1, search = keyword, start = startDate, end = endDate) => {
       setLoading(true);
       try {
         const query = new URLSearchParams({
@@ -40,7 +43,8 @@ const BrandsPage = () => {
           page_size: String(pageSize),
         });
         if (search) query.set("search", search);
-        if (ind) query.set("industry", ind);
+        if (start) query.set("start_date", start);
+        if (end) query.set("end_date", end);
 
         const data = await apiFetch(`api/brand/?${query.toString()}`);
         const items = data?.data?.items || [];
@@ -58,7 +62,7 @@ const BrandsPage = () => {
         setLoading(false);
       }
     },
-    [keyword, industry, pageSize]
+    [keyword, pageSize, startDate, endDate]
   );
 
   // Fetch on mount and when page changes
@@ -83,20 +87,22 @@ const BrandsPage = () => {
 
   const handleSearch = () => {
     setPage(1);
-    fetchBrands(1, keyword, industry);
+    fetchBrands(1, keyword, startDate, endDate);
     setopenFilter(false);
   };
 
   const handleClear = () => {
     setKeyword("");
-    setIndustry("");
+    setDateRange(null);
+    setStartDate(null);
+    setEndDate(null);
     setPage(1);
-    fetchBrands(1, "", "");
+    fetchBrands(1, "", null, null);
     setopenFilter(false);
   };
 
   const handleRefresh = () => {
-    fetchBrands(page, keyword, industry);
+    fetchBrands(page, keyword, startDate, endDate);
   };
 
   const handlePageChange = (newPage) => {
@@ -114,7 +120,7 @@ const BrandsPage = () => {
         try {
           await apiFetch(`api/brand/${brand.id}`, { method: "DELETE" });
           message.success("Brand deleted successfully!");
-          fetchBrands(page, keyword, industry);
+          fetchBrands(page, keyword, startDate, endDate);
         } catch (err) {
           console.error("Delete brand failed:", err);
           message.error(err?.message || "Failed to delete brand.");
@@ -135,8 +141,8 @@ const BrandsPage = () => {
         <MdOutlineKeyboardArrowRight /> <span>Brands</span>
       </div>
 
-      {/* Refresh + Search filter */}
-      <div className="flex gap-2 justify-between items-center mt-3">
+      {/* Refresh + Date Range + Search filter */}
+      <div className="flex gap-2 justify-between items-center mt-3 flex-wrap">
         <div className="flex items-center gap-2">
           <button
             onClick={handleRefresh}
@@ -161,7 +167,20 @@ const BrandsPage = () => {
           </Link>
         </div>
 
-        <div className="relative" ref={filterRef}>
+        <div className="flex items-center gap-2">
+          <div className="w-[280px]">
+            <DateRangePicker
+              value={dateRange}
+              onChange={(range, startISO, endISO) => {
+                setDateRange(range);
+                setStartDate(startISO);
+                setEndDate(endISO);
+                setPage(1);
+                fetchBrands(1, keyword, startISO, endISO);
+              }}
+            />
+          </div>
+          <div className="relative" ref={filterRef}>
           <button
             onClick={() => setopenFilter(!openFilter)}
             className={`flex gap-2 items-center shadow-sm rounded-sm px-4 py-1 ${
@@ -198,84 +217,28 @@ const BrandsPage = () => {
                     onChange={(e) => setKeyword(e.target.value)}
                   />
                 </div>
-                <div>
-                  <ConfigProvider
-                    theme={{
-                      algorithm: isdark
-                        ? theme.darkAlgorithm
-                        : theme.defaultAlgorithm,
-                      components: {
-                        Select: {
-                          selectorBg: isdark ? "#1e293b" : "#ffffff",
-                          colorText: isdark ? "#ffffff" : "#000000",
-                          colorBorder: isdark ? "#475569" : "#d9d9d9",
-                          colorPrimaryHover: isdark ? "#475569" : "#4096ff",
-                          colorPrimary: isdark ? "#475569" : "#1677ff",
-                          controlOutline: "transparent",
-                          optionSelectedBg: isdark ? "#334155" : "#e6f4ff",
-                          colorBgElevated: isdark ? "#1e293b" : "#ffffff",
-                        },
-                      },
-                    }}
+                <div className="flex items-center gap-2 mt-3">
+                  <button
+                    onClick={handleSearch}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#8b5cf6] rounded-sm cursor-pointer text-white"
                   >
-                    <label
-                      className={`block mb-1 text-sm ${
-                        isdark ? "text-white" : ""
-                      }`}
-                    >
-                      Industry
-                    </label>
-                    <Select
-                      className="selectSet w-full"
-                      value={industry || undefined}
-                      onChange={setIndustry}
-                      classNames={{
-                        popup: {
-                          root: isdark
-                            ? "darkSelectDropdown"
-                            : "lightSelectDropdown",
-                        },
-                      }}
-                      getPopupContainer={() => filterRef.current}
-                      showSearch
-                      filterOption={(input, option) =>
-                        (option?.label ?? "")
-                          .toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                      placeholder="Select industry"
-                      options={[
-                        { value: "Food & Beverage", label: "Food & Beverage" },
-                        { value: "ai ", label: "AI" },
-                        { value: "Technology", label: "Technology" },
-                        { value: "Fashion", label: "Fashion" },
-                        { value: "Health", label: "Health" },
-                        { value: "Finance", label: "Finance" },
-                      ]}
-                    />
-                  </ConfigProvider>
-                  <div className="flex items-center gap-2 mt-3">
-                    <button
-                      onClick={handleSearch}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#8b5cf6] rounded-sm cursor-pointer text-white"
-                    >
-                      Search <CgSearch />
-                    </button>
-                    <button
-                      onClick={handleClear}
-                      className={`flex items-center justify-center gap-2 py-2 px-4 rounded-sm border cursor-pointer transition-colors ${
-                        isdark
-                          ? "border-gray-600 text-white hover:bg-[#0f172a]"
-                          : "border-gray-200 text-[#475569] hover:bg-gray-50"
-                      }`}
-                    >
-                      Clear All
-                    </button>
-                  </div>
+                    Search <CgSearch />
+                  </button>
+                  <button
+                    onClick={handleClear}
+                    className={`flex items-center justify-center gap-2 py-2 px-4 rounded-sm border cursor-pointer transition-colors ${
+                      isdark
+                        ? "border-gray-600 text-white hover:bg-[#0f172a]"
+                        : "border-gray-200 text-[#475569] hover:bg-gray-50"
+                    }`}
+                  >
+                    Clear All
+                  </button>
                 </div>
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import { CgSearch } from "react-icons/cg";
 import { ConfigProvider, Select, theme } from "antd";
 import { FaAngleDown } from "react-icons/fa";
 import AnalylicsTable from "../sections/AnalylicsTable";
+import DateRangePicker from "../sections/DateRangePicker";
 import { apiFetch } from "@/lib/apiClient";
 
 const PLATFORM_OPTIONS = [
@@ -23,8 +24,8 @@ const PLATFORM_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: "", label: "All" },
-  { value: "posted", label: "Posted" },
-  { value: "failed", label: "Failed" },
+  { value: "pending", label: "Pending" },
+  { value: "scheduled", label: "Scheduled" },
 ];
 
 const UpcomingPostsPage = () => {
@@ -39,14 +40,18 @@ const UpcomingPostsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize] = useState(10);
+  const [summary, setSummary] = useState(null);
 
   // ── Filter state ───────────────────────────────────────────────────
   const [platformFilter, setPlatformFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [dateRange, setDateRange] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   const fetchPosts = useCallback(
-    async (pageNum = 1, platform = platformFilter, status = statusFilter) => {
+    async (pageNum = 1, platform = platformFilter, status = statusFilter, start = startDate, end = endDate) => {
       setLoading(true);
       try {
         const query = new URLSearchParams({
@@ -55,6 +60,8 @@ const UpcomingPostsPage = () => {
         });
         if (platform) query.set("platform", platform);
         if (status) query.set("status", status);
+        if (start) query.set("start_date", start);
+        if (end) query.set("end_date", end);
 
         const data = await apiFetch(`posts/scheduled/?${query.toString()}`);
         const items = data?.data || [];
@@ -71,6 +78,7 @@ const UpcomingPostsPage = () => {
         setTotal(pagination.total || filtered.length);
         setTotalPages(pagination.total_pages || 1);
         setPage(pagination.page || pageNum);
+        setSummary(data?.summary || null);
       } catch (error) {
         console.error("Fetch scheduled posts failed:", error);
         setPosts([]);
@@ -78,7 +86,7 @@ const UpcomingPostsPage = () => {
         setLoading(false);
       }
     },
-    [platformFilter, statusFilter, pageSize, keyword]
+    [platformFilter, statusFilter, pageSize, keyword, startDate, endDate]
   );
 
   // Fetch on mount and when page changes
@@ -103,7 +111,7 @@ const UpcomingPostsPage = () => {
 
   const handleSearch = () => {
     setPage(1);
-    fetchPosts(1, platformFilter, statusFilter);
+    fetchPosts(1, platformFilter, statusFilter, startDate, endDate);
     setopenFilter(false);
   };
 
@@ -111,13 +119,16 @@ const UpcomingPostsPage = () => {
     setPlatformFilter("");
     setStatusFilter("");
     setKeyword("");
+    setDateRange(null);
+    setStartDate(null);
+    setEndDate(null);
     setPage(1);
-    fetchPosts(1, "", "");
+    fetchPosts(1, "", "", null, null);
     setopenFilter(false);
   };
 
   const handleRefresh = () => {
-    fetchPosts(page, platformFilter, statusFilter);
+    fetchPosts(page, platformFilter, statusFilter, startDate, endDate);
   };
 
   const handlePageChange = (newPage) => {
@@ -143,7 +154,7 @@ const UpcomingPostsPage = () => {
             <div>
               <p className={`text-[#64748b]`}>Scheduled Posts</p>
               <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
-                {total}
+                {summary?.scheduled_count ?? total}
               </h6>
             </div>
           </div>
@@ -154,7 +165,7 @@ const UpcomingPostsPage = () => {
             <div>
               <p className={`text-[#64748b]`}>Pending</p>
               <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
-                {posts.filter((p) => p.status === "pending").length}
+                {summary?.pending_count ?? 0}
               </h6>
             </div>
           </div>
@@ -172,8 +183,8 @@ const UpcomingPostsPage = () => {
         </div>
       </div>
 
-      {/* Refresh + Search filter */}
-      <div className="flex gap-2 justify-between items-center mt-5">
+      {/* Refresh + Search filter + Date Range */}
+      <div className="flex gap-2 justify-between items-center mt-5 flex-wrap">
         <button
           onClick={handleRefresh}
           className={`px-2 py-1 text-white bg-[#8b5cf6] rounded-sm flex gap-2 items-center cursor-pointer disabled:opacity-50`}
@@ -182,7 +193,20 @@ const UpcomingPostsPage = () => {
           <HiOutlineRefresh className={loading ? "animate-spin" : ""} />
           {loading ? "Loading..." : "Refresh"}
         </button>
-        <div className="relative" ref={filterRef}>
+        <div className="flex gap-2 items-center">
+          <div className="w-[280px]">
+            <DateRangePicker
+              value={dateRange}
+              onChange={(range, startISO, endISO) => {
+                setDateRange(range);
+                setStartDate(startISO);
+                setEndDate(endISO);
+                setPage(1);
+                fetchPosts(1, platformFilter, statusFilter, startISO, endISO);
+              }}
+            />
+          </div>
+          <div className="relative" ref={filterRef}>
           <button
             onClick={() => setopenFilter(!openFilter)}
             className={`flex gap-2 items-center shadow-sm rounded-sm px-4 py-1 ${isdark ? "text-white bg-[#1e293b]" : " bg-white"} `}
@@ -272,6 +296,7 @@ const UpcomingPostsPage = () => {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import {
   FaInstagram,
   FaLinkedin,
   FaXTwitter,
+  FaYoutube,
   FaThumbsUp,
   FaRegImage,
 } from "react-icons/fa6";
@@ -14,29 +15,8 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { ConfigProvider, Modal, Tooltip, theme } from "antd";
 import { HiOutlineRefresh } from "react-icons/hi";
 import dayjs from "@/lib/dayjsSetup";
-
-/** Small image thumbnail that shows a spinner until the image finishes loading. */
-const ImageWithLoader = ({ src, alt, className, rounded }) => {
-  const [loaded, setLoaded] = useState(false);
-  return (
-    <div className={`relative ${className ?? ""} ${rounded ?? ""}`}>
-      {!loaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
-          <HiOutlineRefresh className="animate-spin text-[#8b5cf6]" size={14} />
-        </div>
-      )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        onLoad={() => setLoaded(true)}
-        className={`h-full w-full object-cover transition-opacity duration-200 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
-      />
-    </div>
-  );
-};
+import TableLoader from "@/components/common/TableLoader";
+import ImageWithLoader from "@/components/common/ImageWithLoader";
 
 const PLATFORM_STYLES = {
   facebook: { bg: "bg-[#1877F2]", Icon: FaFacebook, shape: "rounded-full" },
@@ -47,6 +27,9 @@ const PLATFORM_STYLES = {
   },
   linkedin: { bg: "bg-[#0A66C2]", Icon: FaLinkedin, shape: "rounded-md" },
   twitter: { bg: "bg-black", Icon: FaXTwitter, shape: "rounded-full" },
+  x: { bg: "bg-black", Icon: FaXTwitter, shape: "rounded-full" },
+  youtube: { bg: "bg-[#FF0000]", Icon: FaYoutube, shape: "rounded-full" },
+  tiktok: { bg: "bg-black", Icon: FaXTwitter, shape: "rounded-full" },
 };
 
 const STATUS_STYLES = {
@@ -107,6 +90,32 @@ const AnalylicsTable = ({ posts = [], loading = false, page = 1, totalPages = 1,
     },
   };
 
+  if (loading) {
+    return (
+      <ConfigProvider theme={antdTheme}>
+        <TableLoader columns={7} rows={5} />
+        {/* Media preview modal still needs to be accessible */}
+        <Modal
+          open={!!modalImage}
+          onCancel={() => setModalImage(null)}
+          footer={null}
+          width={640}
+          title="Media Preview"
+          centered
+        >
+          {modalImage && (
+            <ImageWithLoader
+              src={modalImage}
+              alt="post media preview"
+              className="w-full min-h-[200px]"
+              rounded="rounded-lg"
+            />
+          )}
+        </Modal>
+      </ConfigProvider>
+    );
+  }
+
   return (
     <ConfigProvider theme={antdTheme}>
       <div className={`w-full overflow-x-auto rounded-sm mt-5 ${isdark ? "bg-[#1e293b]" : "bg-white"} p-2`}>
@@ -124,13 +133,7 @@ const AnalylicsTable = ({ posts = [], loading = false, page = 1, totalPages = 1,
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="py-10 text-center text-sm text-[#94a3b8]">
-                  Loading posts...
-                </td>
-              </tr>
-            ) : posts.length === 0 ? (
+            {posts.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-sm text-[#94a3b8]">
                   No posts found.

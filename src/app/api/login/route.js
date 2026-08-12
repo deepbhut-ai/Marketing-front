@@ -14,6 +14,15 @@ const LOGIN_RATE_LIMIT = 8;
 const LOGIN_RATE_WINDOW_MS = 60 * 1000;
 const loginAttempts = new Map();
 
+// Periodically evict stale rate-limit entries to prevent unbounded memory growth
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of loginAttempts) {
+      if (now > entry.resetAt) loginAttempts.delete(key);
+    }
+  }, 5 * 60 * 1000); // cleanup every 5 minutes
+
 function getClientKey(request) {
   const forwarded = request.headers.get('x-forwarded-for') || '';
   const firstIp = forwarded.split(',')[0]?.trim();
@@ -65,7 +74,7 @@ export async function POST(request) {
   }
 
   const email = typeof body?.email === 'string' ? body.email.trim() : '';
-  const password = typeof body?.password === 'string' ? body.password.trim() : '';
+  const password = typeof body?.password === 'string' ? body.password : '';
 
   if (!email || !password) {
     return NextResponse.json({ success: false, message: 'Email and password are required.' }, { status: 400 });
@@ -76,7 +85,7 @@ export async function POST(request) {
     upstream = await fetch(`${API_BASE}/accounts/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...body, email, password }),
+      body: JSON.stringify({ email, password, device_name: body.device_name, captcha: body.captcha }),
     });
   } catch {
     return NextResponse.json({ success: false, message: 'Authentication service is unavailable.' }, { status: 502 });
@@ -130,7 +139,7 @@ export async function POST(request) {
 
   const cookieBase = {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict',
     path: '/',
     maxAge: COOKIE_MAX_AGE,
   };

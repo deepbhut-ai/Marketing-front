@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const UserContext = createContext();
 
@@ -22,20 +22,20 @@ export const UserProvider = ({ children }) => {
     setMounted(true)
   }, [isdark]);
 
-   const handelDrakmode = (value) => {
+   const handleDarkMode = useCallback((value) => {
     setIsdark(value);
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     sidebarOpen,
     setSidebarOpen,
     isdark,
     setIsdark,
-    handelDrakmode,
+    handleDarkMode,
     openMobileNav,
     setOpenMobileNav,
     mounted,
-  };
+  }), [sidebarOpen, isdark, openMobileNav, mounted]);
 
   return (
     <UserContext.Provider value={value}>
@@ -48,8 +48,6 @@ export const useUserContext = () => {
   const context = useContext(UserContext);
 
   if (!context) {
-    console.log("🚀 ~ useUserContext ~ context:", context)
-    
     throw new Error("useUserContext must be used within UserProvider");
   }
 

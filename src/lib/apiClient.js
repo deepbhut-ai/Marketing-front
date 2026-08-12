@@ -47,7 +47,10 @@ async function refreshAccessToken() {
   }
 }
 
+let _redirecting = false;
 function goToLogin() {
+  if (_redirecting) return;
+  _redirecting = true;
   clearAccessToken();
   if (typeof window !== 'undefined') window.location.href = '/login';
 }
