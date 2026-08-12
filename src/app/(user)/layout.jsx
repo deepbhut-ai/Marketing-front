@@ -1,11 +1,16 @@
+"use client";
 import Header from "@/components/user/header/Header";
 import TopBar from "@/components/user/header/TopBar";
-import { UserProvider } from "@/context/UserContext";
+import { UserProvider, useUserContext } from "@/context/UserContext";
 import { App as AntApp } from "antd";
-export default function UserLayout({ children }) {
+import PageLoader from "@/components/common/Pageloader";
+
+function LayoutContent({ children }) {
+  const { mounted } = useUserContext();
+
+  if (!mounted) return <PageLoader />;
+
   return (
-    <UserProvider>
-    <AntApp>
     <div className="flex h-dvh overflow-hidden">
       {/* Sidebar */}
       <Header />
@@ -19,7 +24,15 @@ export default function UserLayout({ children }) {
         </main>
       </div>
     </div>
-    </AntApp>
-       </UserProvider>
+  );
+}
+
+export default function UserLayout({ children }) {
+  return (
+    <UserProvider>
+      <AntApp>
+        <LayoutContent>{children}</LayoutContent>
+      </AntApp>
+    </UserProvider>
   );
 }

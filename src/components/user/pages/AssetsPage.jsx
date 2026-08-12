@@ -247,7 +247,7 @@ const AssetsPage = () => {
             </div>
             <div>
               <p className="text-[#64748b]">Storage Used</p>
-              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
+              <h6 className={`text-sm ${isdark ? "text-white" : "text-[#64748b]"}`}>
                 {formatSize(summary?.total_size_mb)} / {formatSize(summary?.storage_limit_mb)}
               </h6>
             </div>

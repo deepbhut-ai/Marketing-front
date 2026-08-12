@@ -168,7 +168,7 @@ const AdminTopBar = () => {
                 </div>
               </li>
               <li  className={`flex gap-3 items-center border-y-1 border-gray-500 ${isdark ? "hover:bg-[#334155] " : "hover:bg-gray-100 "} ps-3 py-1 pt-2 cursor-pointer ${!isdark && "text-black"} `}>
-                <Link href={"/profile"} className="flex gap-3 items-center">
+                <Link href={"/settings"} className="flex gap-3 items-center">
                   <FaUser /> Edit Profile
                 </Link>
               </li>

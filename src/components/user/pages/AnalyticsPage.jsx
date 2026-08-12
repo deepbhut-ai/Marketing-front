@@ -15,7 +15,6 @@ import { apiFetch } from "@/lib/apiClient";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All" },
-  { value: "pending", label: "Pending" },
   { value: "posted", label: "Posted" },
   { value: "failed", label: "Failed" },
 ];
@@ -40,6 +39,7 @@ const AnalyticsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize] = useState(10);
+  const [summary, setSummary] = useState(null);
 
   // ── Filter state — defaults to "All" (empty string) ────────────────
   const [statusFilter, setStatusFilter] = useState("");
@@ -57,9 +57,10 @@ const AnalyticsPage = () => {
           page_size: String(pageSize),
         }).toString();
 
-        const data = await apiFetch(`posts/list/?${query}`);
+        const data = await apiFetch(`posts/history/?${query}`);
         const items = data?.data || [];
         const pagination = data?.pagination || {};
+        const apiSummary = data?.summary || null;
 
         // If a keyword is set, filter client-side on the caption
         const filtered = keyword
@@ -72,6 +73,7 @@ const AnalyticsPage = () => {
         setTotal(pagination.total || filtered.length);
         setTotalPages(pagination.total_pages || 1);
         setPage(pagination.page || pageNum);
+        setSummary(apiSummary);
       } catch (error) {
         console.error("Fetch posts failed:", error);
         setPosts([]);
@@ -137,7 +139,7 @@ const AnalyticsPage = () => {
 
       {/* Stat cards */}
       <div className={`flex gap-5 flex-wrap mt-3`}>
-        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 w-full`}>
+        <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 w-full`}>
           <div className={`flex gap-2 shadow-sm rounded-xl p-5 ${isdark ? "bg-[#1e293b]" : "bg-white"}`}>
             <div className="p-3 flex justify-center items-center bg-[#8b5cf61a] text-[#8b5cf6] rounded-xl">
               <BiBarChartAlt2 size={24} />
@@ -154,17 +156,21 @@ const AnalyticsPage = () => {
               <BiLike size={24} />
             </div>
             <div>
-              <p className={`text-[#64748b]`}>Total Reactions</p>
-              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>0</h6>
+              <p className={`text-[#64748b]`}>Posted</p>
+              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
+                {summary?.total_posted ?? 0}
+              </h6>
             </div>
           </div>
           <div className={`flex gap-2 shadow-sm rounded-xl p-5 ${isdark ? "bg-[#1e293b]" : "bg-white"}`}>
-            <div className="p-3 flex justify-center items-center bg-[#f59e0b1a] text-[#f59e0b] rounded-xl">
+            <div className="p-3 flex justify-center items-center bg-[#f43f5e1a] text-[#f43f5e] rounded-xl">
               <BiCommentDetail size={24} />
             </div>
             <div>
-              <p className={`text-[#64748b]`}>Total Comments</p>
-              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>0</h6>
+              <p className={`text-[#64748b]`}>Failed</p>
+              <h6 className={`text-xl ${isdark ? "text-white" : "text-[#64748b]"}`}>
+                {summary?.total_failed ?? 0}
+              </h6>
             </div>
           </div>
         </div>
@@ -193,18 +199,6 @@ const AnalyticsPage = () => {
               className={`absolute top-12 px-4 py-3 shadow-sm border rounded-sm left-[-134px] w-[260px] z-10 ${isdark ? "bg-[#1e293b] border-[#d2d7e04d]" : "bg-white border-[#e2e8f0]"}`}
             >
               <div className="space-y-3">
-                <div>
-                  <label className={`block mb-1 text-sm ${isdark ? "text-white" : ""}`}>
-                    Search Keyword
-                  </label>
-                  <input
-                    className={`input w-full ${isdark ? "" : "!border-[#d9d9d9]"}`}
-                    type="text"
-                    placeholder="Enter search keyword"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
-                </div>
                 <div>
                   <ConfigProvider
                     theme={{

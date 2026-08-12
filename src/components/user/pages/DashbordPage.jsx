@@ -3,6 +3,7 @@ import PageLoader from "@/components/common/Pageloader";
 import { useUserContext } from "@/context/UserContext";
 import { Modal, Select, ConfigProvider, theme } from "antd";
 import Image from "next/image";
+import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import React, { useRef, useState } from "react";
 import {
@@ -26,6 +27,7 @@ import { RiGroupLine } from "react-icons/ri";
 
 const DashbordPage = () => {
   const scrollRef = useRef(null);
+  const router = useRouter();
   const { isdark } = useUserContext();
   const date = new Date();
   const weekday = date.toLocaleDateString("en-US", { weekday: "short" }); // "Mon"
@@ -271,9 +273,9 @@ const DashbordPage = () => {
                 Posts
               </span>
             </div>
-            <div className={`${isdark ? "text-white" : "text-[#475569]"}`}>
-              <FaPlus onClick={showModal} />
-            </div>
+            <Link href="/create-post" className={`${isdark ? "text-white" : "text-[#475569]"}`}>
+              <FaPlus />
+            </Link>
           </div>
         </div>
         <div className=" px-5">
@@ -285,8 +287,8 @@ const DashbordPage = () => {
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
           >
+            <Link href="/create-post">
             <li
-              onClick={showModal}
               className={`h-96 min-w-[14rem] sm:min-w-[18rem] relative flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#ddd6fe] ${isdark ? "bg-[#6d28d91a]" : "bg-[#a78bfa1a]"}  `}
             >
               <div className="rounded-full font-light h-10 w-10 text-[#8b5cf6] bg-[#a78bfa1a] flex justify-center items-center">
@@ -298,6 +300,7 @@ const DashbordPage = () => {
                 Create Post
               </span>
             </li>
+            </Link>
             <li
               className={`h-96 min-w-[14rem] sm:min-w-[18rem] relative flex flex-col items-center justify-center rounded-xl shadow-sm ${isdark ? "bg-[#0f172a7e] border border-gray-600" : "bg-white"}  `}
             >

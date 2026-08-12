@@ -5,9 +5,10 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { ConfigProvider, Modal, Tooltip, theme } from "antd";
 import { HiOutlineRefresh } from "react-icons/hi";
 import { FaRegImage } from "react-icons/fa6";
-import { FaRegTrashAlt } from "react-icons/fa";
+import { FaRegTrashAlt, FaRegEdit } from "react-icons/fa";
 import { BiGlobe } from "react-icons/bi";
 import dayjs from "@/lib/dayjsSetup";
+import Link from "next/link";
 
 /** Small image thumbnail that shows a spinner until the image finishes loading. */
 const ImageWithLoader = ({ src, alt, className, rounded }) => {
@@ -267,13 +268,23 @@ const BrandsTable = ({
 
                     {/* Target Audience */}
                     <td
-                      className={`px-2 py-2 align-middle text-sm border-b ${
+                      className={`px-2 py-2 align-middle border-b ${
                         isdark
-                          ? "text-[#94a3b8] border-[#d2d7e04d]"
-                          : "text-[#475569] border-[#e2e8f0]"
+                          ? "border-[#d2d7e04d]"
+                          : "border-[#e2e8f0]"
                       }`}
                     >
-                      {brand.target_audience || "—"}
+                      <TagList
+                        items={
+                          brand.target_audience
+                            ? brand.target_audience
+                                .split(",")
+                                .map((s) => s.trim())
+                                .filter(Boolean)
+                            : []
+                        }
+                        max={1}
+                      />
                     </td>
 
                     {/* Created At */}
@@ -295,14 +306,23 @@ const BrandsTable = ({
                           : "border-[#e2e8f0]"
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => onDelete?.(brand)}
-                        className="flex items-center gap-1 text-sm text-red-500 hover:text-red-600 transition-colors"
-                        title="Delete"
-                      >
-                        <FaRegTrashAlt size={16} />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/brands/${brand.id}/edit`}
+                          className="flex items-center gap-1 text-sm text-[#8b5cf6] hover:text-[#7c3aed] transition-colors"
+                          title="Edit"
+                        >
+                          <FaRegEdit size={16} />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => onDelete?.(brand)}
+                          className="flex items-center gap-1 text-sm text-red-500 hover:text-red-600 transition-colors"
+                          title="Delete"
+                        >
+                          <FaRegTrashAlt size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
