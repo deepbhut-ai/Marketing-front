@@ -3,6 +3,7 @@ import { useUserContext } from "@/context/UserContext";
 import React from "react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import AssetCard from "./AssetCard";
+import TableLoader from "@/components/common/TableLoader";
 
 const Pagination = ({ page, totalPages, onPageChange, isdark }) => {
   if (totalPages <= 1) return null;
@@ -51,11 +52,7 @@ const Aiassets = ({
   const { isdark } = useUserContext();
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20 text-sm text-[#94a3b8]">
-        Loading AI assets...
-      </div>
-    );
+    return <TableLoader />;
   }
 
   if (assets.length === 0) {

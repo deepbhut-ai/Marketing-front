@@ -10,7 +10,7 @@ import Link from "next/link";
 import { logout, apiDownload } from "@/lib/apiClient";
 import { App } from "antd";
 const TopBar = () => {
-  const { sidebarOpen, setSidebarOpen, isdark, handelDrakmode, openMobileNav, setOpenMobileNav } =
+  const { sidebarOpen, setSidebarOpen, isdark, handleDarkMode, openMobileNav, setOpenMobileNav } =
     useUserContext();
   const [openMode, setOpenMode] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
@@ -156,21 +156,21 @@ const TopBar = () => {
             <ul className="flex flex-col gap-1">
               <li
                 className={`flex gap-3 items-center ${isdark ? "hover:bg-[#334155] rounded-t-md" : "hover:bg-gray-100 rounded-t-md"} ps-3 py-1 pt-2 cursor-pointer ${!isdark && "text-[#8b5cf6]"} `}
-                onClick={() => handelDrakmode(false)}
+                onClick={() => handleDarkMode(false)}
               >
                 {" "}
                 <GoSun size={18} /> Light
               </li>
               <li
                 className={`flex gap-3 items-center ${isdark ? "hover:bg-[#334155] rounded-b-md" : "hover:bg-gray-100 rounded-b-md"} ps-3 py-1 pb-2 cursor-pointer ${isdark && "text-[#8b5cf6]"} `}
-                onClick={() => handelDrakmode(true)}
+                onClick={() => handleDarkMode(true)}
               >
                 <IoMoon size={18} /> Dark
               </li>
             </ul>
           </div>
         </div>
-        <div className="relative" ref={notificationsRef}>
+        {/* <div className="relative" ref={notificationsRef}>
           <FiBell
             size={20}
             className={`cursor-pointer  ${isdark ? "text-[#94a3b8]" : "text-slate-500"} `}
@@ -198,7 +198,7 @@ const TopBar = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
         <div className="relative" ref={profileRef}>
           <div onClick={()=>handelProfile()} className="relative rounded-full w-10 h-10 cursor-pointer flex justify-center items-center bg-[#e5e7eb] text-lg font-semibold">
             MI

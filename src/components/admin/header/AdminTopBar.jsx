@@ -9,7 +9,7 @@ import { IoMoon } from "react-icons/io5";
 import Link from "next/link";
 import { logout } from "@/lib/apiClient";
 const AdminTopBar = () => {
-  const { sidebarOpen, setSidebarOpen, isdark, handelDrakmode, openMobileNav, setOpenMobileNav } =
+  const { sidebarOpen, setSidebarOpen, isdark, handleDarkMode, openMobileNav, setOpenMobileNav } =
     useUserContext();
   const [openMode, setOpenMode] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
@@ -109,14 +109,14 @@ const AdminTopBar = () => {
             <ul className="flex flex-col gap-1">
               <li
                 className={`flex gap-3 items-center ${isdark ? "hover:bg-[#334155] rounded-t-md" : "hover:bg-gray-100 rounded-t-md"} ps-3 py-1 pt-2 cursor-pointer ${!isdark && "text-[#8b5cf6]"} `}
-                onClick={() => handelDrakmode(false)}
+                onClick={() => handleDarkMode(false)}
               >
                 {" "}
                 <GoSun size={18} /> Light
               </li>
               <li
                 className={`flex gap-3 items-center ${isdark ? "hover:bg-[#334155] rounded-b-md" : "hover:bg-gray-100 rounded-b-md"} ps-3 py-1 pb-2 cursor-pointer ${isdark && "text-[#8b5cf6]"} `}
-                onClick={() => handelDrakmode(true)}
+                onClick={() => handleDarkMode(true)}
               >
                 <IoMoon size={18} /> Dark
               </li>

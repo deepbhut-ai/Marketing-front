@@ -100,12 +100,8 @@ const Settings = () => {
             }))
           );
           // Set defaults from the models API if status didn't provide them
-          if (!imageModel && mData.default_image_model) {
-            setImageModel(mData.default_image_model);
-          }
-          if (!videoModel && mData.default_video_model) {
-            setVideoModel(mData.default_video_model);
-          }
+          setImageModel((prev) => prev || mData.default_image_model || "");
+          setVideoModel((prev) => prev || mData.default_video_model || "");
         } catch {
           // models list fetch failed — dropdowns will be empty
         }
@@ -323,7 +319,7 @@ const Settings = () => {
 
       {/* ---------- card ---------- */}
       <div
-        className={`max-w-[1060px] mx-auto rounded-lg hidden p-6 sm:p-8 mt-6 ${
+        className={`max-w-[1060px] mx-auto rounded-lg p-6 sm:p-8 mt-6 hidden ${
           isdark ? "bg-[#1e293b]" : "bg-white shadow-sm"
         }`}
       >

@@ -11,6 +11,7 @@ import { CgSearch } from "react-icons/cg";
 import { ConfigProvider, Select, theme } from "antd";
 import { FaAngleDown } from "react-icons/fa";
 import AnalylicsTable from "../sections/AnalylicsTable";
+import DateRangePicker from "../sections/DateRangePicker";
 import { apiFetch } from "@/lib/apiClient";
 
 const STATUS_OPTIONS = [
@@ -45,9 +46,12 @@ const AnalyticsPage = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [dateRange, setDateRange] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   const fetchPosts = useCallback(
-    async (pageNum = 1, status = statusFilter, platform = platformFilter) => {
+    async (pageNum = 1, status = statusFilter, platform = platformFilter, start = startDate, end = endDate) => {
       setLoading(true);
       try {
         const query = new URLSearchParams({
@@ -55,9 +59,11 @@ const AnalyticsPage = () => {
           platform: platform || "",
           page: String(pageNum),
           page_size: String(pageSize),
-        }).toString();
+        });
+        if (start) query.set("start_date", start);
+        if (end) query.set("end_date", end);
 
-        const data = await apiFetch(`posts/history/?${query}`);
+        const data = await apiFetch(`posts/history/?${query.toString()}`);
         const items = data?.data || [];
         const pagination = data?.pagination || {};
         const apiSummary = data?.summary || null;
@@ -81,7 +87,7 @@ const AnalyticsPage = () => {
         setLoading(false);
       }
     },
-    [statusFilter, platformFilter, pageSize, keyword]
+    [statusFilter, platformFilter, pageSize, keyword, startDate, endDate]
   );
 
   // Fetch on mount and when page changes
@@ -106,7 +112,7 @@ const AnalyticsPage = () => {
 
   const handleSearch = () => {
     setPage(1);
-    fetchPosts(1, statusFilter, platformFilter);
+    fetchPosts(1, statusFilter, platformFilter, startDate, endDate);
     setopenFilter(false);
   };
 
@@ -115,13 +121,16 @@ const AnalyticsPage = () => {
     setStatusFilter("");
     setPlatformFilter("");
     setKeyword("");
+    setDateRange(null);
+    setStartDate(null);
+    setEndDate(null);
     setPage(1);
-    fetchPosts(1, "", "");
+    fetchPosts(1, "", "", null, null);
     setopenFilter(false);
   };
 
   const handleRefresh = () => {
-    fetchPosts(page, statusFilter, platformFilter);
+    fetchPosts(page, statusFilter, platformFilter, startDate, endDate);
   };
 
   const handlePageChange = (newPage) => {
@@ -176,8 +185,8 @@ const AnalyticsPage = () => {
         </div>
       </div>
 
-      {/* Refresh + Search filter */}
-      <div className="flex gap-2 justify-between items-center mt-5">
+      {/* Refresh + Search filter + Date Range */}
+      <div className="flex gap-2 justify-between items-center mt-5 flex-wrap">
         <button
           onClick={handleRefresh}
           className={`px-2 py-1 text-white bg-[#8b5cf6] rounded-sm flex gap-2 items-center cursor-pointer disabled:opacity-50`}
@@ -186,7 +195,20 @@ const AnalyticsPage = () => {
           <HiOutlineRefresh className={loading ? "animate-spin" : ""} />
           {loading ? "Loading..." : "Refresh"}
         </button>
-        <div className="relative" ref={filterRef}>
+        <div className="flex gap-2 items-center">
+          <div className="w-[280px]">
+            <DateRangePicker
+              value={dateRange}
+              onChange={(range, startISO, endISO) => {
+                setDateRange(range);
+                setStartDate(startISO);
+                setEndDate(endISO);
+                setPage(1);
+                fetchPosts(1, statusFilter, platformFilter, startISO, endISO);
+              }}
+            />
+          </div>
+          <div className="relative" ref={filterRef}>
           <button
             onClick={() => setopenFilter(!openFilter)}
             className={`flex gap-2 items-center shadow-sm rounded-sm px-4 py-1 ${isdark ? "text-white bg-[#1e293b]" : " bg-white"} `}
@@ -276,6 +298,7 @@ const AnalyticsPage = () => {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
 

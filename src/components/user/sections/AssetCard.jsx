@@ -5,7 +5,7 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { FaRegTrashAlt } from "react-icons/fa";
 import { RiEdit2Fill } from "react-icons/ri";
 import { HiOutlineRefresh } from "react-icons/hi";
-import { FaHeart, FaRegHeart } from "react-icons/fa6";
+import { FaHeart, FaRegHeart, FaVideo } from "react-icons/fa6";
 import dayjs from "@/lib/dayjsSetup";
 
 /** Format bytes → human readable (KB / MB) */
@@ -17,28 +17,74 @@ const formatSize = (bytes) => {
 };
 
 /** Thumbnail that shows a spinner until the image loads */
-const Thumb = ({ src, alt, isdark }) => {
+const Thumb = ({ src, alt, isdark, isVideo }) => {
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  // For videos, show a playable video element with controls
+  if (isVideo) {
+    return (
+      <div
+        className={`relative w-full rounded-t-xl h-60 overflow-hidden ${
+          isdark ? "bg-[#0f172a]" : "bg-slate-100"
+        }`}
+      >
+        {!loaded && !error && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <HiOutlineRefresh className="animate-spin text-[#8b5cf6]" size={24} />
+          </div>
+        )}
+        {error ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <FaVideo className="text-slate-400" size={40} />
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <video
+            src={src}
+            alt={alt}
+            onLoadedData={() => setLoaded(true)}
+            onError={() => setError(true)}
+            className={`w-full h-60 object-cover rounded-t-xl transition-opacity duration-200 ${
+              loaded ? "opacity-100" : "opacity-0"
+            }`}
+            muted
+            playsInline
+            controls
+            preload="auto"
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative w-full rounded-t-xl h-60 overflow-hidden ${
         isdark ? "bg-[#0f172a]" : "bg-slate-100"
       }`}
     >
-      {!loaded && (
+      {!loaded && !error && (
         <div className="absolute inset-0 flex items-center justify-center">
           <HiOutlineRefresh className="animate-spin text-[#8b5cf6]" size={24} />
         </div>
       )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        onLoad={() => setLoaded(true)}
-        className={`w-full h-60 object-cover rounded-t-xl transition-opacity duration-200 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
-      />
+      {error ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xs text-slate-400">No preview</span>
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
+          className={`w-full h-60 object-cover rounded-t-xl transition-opacity duration-200 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      )}
     </div>
   );
 };
@@ -56,6 +102,7 @@ const AssetCard = ({ asset, onDelete, onEdit, onToggleFavorite }) => {
   const [favBusy, setFavBusy] = useState(false);
 
   const imgSrc = asset.thumbnail_url || asset.public_url || asset.url;
+  const isVideo = asset.asset_type === "video";
   const dateStr = asset.created_at
     ? dayjs(asset.created_at).format("DD MMM, YYYY")
     : "";
@@ -70,7 +117,7 @@ const AssetCard = ({ asset, onDelete, onEdit, onToggleFavorite }) => {
     >
       <div>
         {imgSrc ? (
-          <Thumb src={imgSrc} alt={asset.name} isdark={isdark} />
+          <Thumb src={imgSrc} alt={asset.name} isdark={isdark} isVideo={isVideo} />
         ) : (
           <div
             className={`w-full rounded-t-xl h-60 flex items-center justify-center ${

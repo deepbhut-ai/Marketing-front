@@ -266,21 +266,18 @@ const Stagetwo = ({
       return;
     }
 
-    // Send ISO-8601 format with "Z" suffix (e.g. "2026-08-10T04:04:00.000Z")
-    // but preserve the calendar day the user actually picked.
-    // Plain .toISOString() converts to real UTC, which shifts the date
-    // backward for non-UTC timezones (e.g. 10 Aug 04:04 IST → 09 Aug 22:34 UTC).
-    // Instead we treat the local wall-clock time as if it were UTC, so the
-    // API receives the same date/time the user sees on screen. The user's
-    // real timezone is sent separately in the `timezone` field so the
-    // backend can convert if needed.
+    // Convert the picked local time to proper UTC using the selected timezone.
+    // The user picks 5:05 AM in Asia/Calcutta (IST, UTC+5:30),
+    // so the API should receive 2026-08-12T23:35:00.000Z (5:05 AM IST → 11:35 PM UTC previous day).
+    // We use dayjs.tz() to interpret the wall-clock time in the user's timezone,
+    // then .utc() to convert to UTC before sending.
     const fromRaw = scheduleRange?.[0];
     const toRaw = scheduleRange?.[1];
     const from_date = fromRaw
-      ? dayjs.utc(fromRaw.format("YYYY-MM-DD HH:mm:ss")).toISOString()
+      ? dayjs.tz(fromRaw.format("YYYY-MM-DD HH:mm:ss"), timezone).utc().toISOString()
       : null;
     const to_date = toRaw
-      ? dayjs.utc(toRaw.format("YYYY-MM-DD HH:mm:ss")).toISOString()
+      ? dayjs.tz(toRaw.format("YYYY-MM-DD HH:mm:ss"), timezone).utc().toISOString()
       : null;
 
     const payload = {

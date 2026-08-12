@@ -181,7 +181,7 @@ const findOpenParent = (pathname) =>
     .find((i) => i.children.some((c) => c.linknav === pathname));
 
 const AdminHeader = () => {
-  const { sidebarOpen, isdark, handelDrakmode, openMobileNav, setOpenMobileNav } =
+  const { sidebarOpen, isdark, handleDarkMode, openMobileNav, setOpenMobileNav } =
     useUserContext();
   const pathname = usePathname();
   const mobileNavRef = useRef(null);

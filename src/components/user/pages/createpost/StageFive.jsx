@@ -75,7 +75,6 @@ const StageFive = ({
   generatedItems = [],
 }) => {
   const { isdark } = useUserContext();
-  const router = useRouter();
   const [messageApi, messageContextHolder] = message.useMessage();
 
   const hasContent = postTypes.includes("content");
