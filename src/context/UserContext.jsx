@@ -8,6 +8,7 @@ export const UserProvider = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isdark,setIsdark]=useState(true)
   const [openMobileNav,setOpenMobileNav]=useState(false)
+  const [mounted, setMounted] = useState(false)
     // ✅ Apply dark class to body whenever isdark changes
   useEffect(() => {
     if (isdark) {
@@ -17,6 +18,8 @@ export const UserProvider = ({ children }) => {
       document.documentElement.classList.remove("dark");
       document.body.classList.remove("dark-mode");
     }
+    // Theme has been applied to the DOM — safe to show the real UI
+    setMounted(true)
   }, [isdark]);
 
    const handelDrakmode = (value) => {
@@ -31,6 +34,7 @@ export const UserProvider = ({ children }) => {
     handelDrakmode,
     openMobileNav,
     setOpenMobileNav,
+    mounted,
   };
 
   return (

@@ -113,7 +113,7 @@ const AnalylicsTable = ({ posts = [], loading = false, page = 1, totalPages = 1,
         <table className="w-full min-w-[960px] border-separate border-spacing-0">
           <thead>
             <tr>
-              {["Platform", "Content", "Publish Date", "Status", "Reactions", "Comments"].map((head) => (
+              {["Platform", "Content", "Publish Date", "Status", "Error", "Reactions", "Comments"].map((head) => (
                 <th
                   key={head}
                   className={`px-2 py-4 text-left text-sm font-semibold border-b ${isdark ? "text-white border-[#d2d7e04d]" : "border-[#e2e8f0]"}`}
@@ -126,13 +126,13 @@ const AnalylicsTable = ({ posts = [], loading = false, page = 1, totalPages = 1,
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-[#94a3b8]">
+                <td colSpan={7} className="py-10 text-center text-sm text-[#94a3b8]">
                   Loading posts...
                 </td>
               </tr>
             ) : posts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-[#94a3b8]">
+                <td colSpan={7} className="py-10 text-center text-sm text-[#94a3b8]">
                   No posts found.
                 </td>
               </tr>
@@ -179,7 +179,7 @@ const AnalylicsTable = ({ posts = [], loading = false, page = 1, totalPages = 1,
                           placement="topLeft"
                           styles={{ root: { maxWidth: 400 } }}
                         >
-                          <span className="max-w-[420px] truncate text-sm cursor-help">
+                          <span className="max-w-[200px] truncate text-sm cursor-help">
                             {captionText}
                           </span>
                         </Tooltip>
@@ -194,6 +194,23 @@ const AnalylicsTable = ({ posts = [], loading = false, page = 1, totalPages = 1,
                     {/* Status */}
                     <td className={`px-1 py-2 align-middle border-b ${isdark ? "text-[#94a3b8] border-[#d2d7e04d]" : "border-[#e2e8f0] text-[#475569]"}`}>
                       <StatusBadge status={post.status} />
+                    </td>
+
+                    {/* Error */}
+                    <td className={`px-1 py-2 align-middle border-b ${isdark ? "text-[#94a3b8] border-[#d2d7e04d]" : "border-[#e2e8f0] text-[#475569]"}`}>
+                      {post.error_message ? (
+                        <Tooltip
+                          title={post.error_message}
+                          placement="topLeft"
+                          styles={{ root: { maxWidth: 400 } }}
+                        >
+                          <span className="max-w-[200px] truncate text-xs text-red-500 cursor-help inline-block">
+                            {post.error_message}
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <span className="text-sm text-[#94a3b8]">—</span>
+                      )}
                     </td>
 
                     {/* Reactions */}

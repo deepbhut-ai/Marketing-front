@@ -21,6 +21,12 @@ const PLATFORM_OPTIONS = [
   { value: "twitter", label: "Twitter / X" },
 ];
 
+const STATUS_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "posted", label: "Posted" },
+  { value: "failed", label: "Failed" },
+];
+
 const UpcomingPostsPage = () => {
   const { isdark } = useUserContext();
   const [openFilter, setopenFilter] = useState(false);
@@ -36,10 +42,11 @@ const UpcomingPostsPage = () => {
 
   // ── Filter state ───────────────────────────────────────────────────
   const [platformFilter, setPlatformFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [keyword, setKeyword] = useState("");
 
   const fetchPosts = useCallback(
-    async (pageNum = 1, platform = platformFilter) => {
+    async (pageNum = 1, platform = platformFilter, status = statusFilter) => {
       setLoading(true);
       try {
         const query = new URLSearchParams({
@@ -47,6 +54,7 @@ const UpcomingPostsPage = () => {
           page_size: String(pageSize),
         });
         if (platform) query.set("platform", platform);
+        if (status) query.set("status", status);
 
         const data = await apiFetch(`posts/scheduled/?${query.toString()}`);
         const items = data?.data || [];
@@ -70,7 +78,7 @@ const UpcomingPostsPage = () => {
         setLoading(false);
       }
     },
-    [platformFilter, pageSize, keyword]
+    [platformFilter, statusFilter, pageSize, keyword]
   );
 
   // Fetch on mount and when page changes
@@ -95,20 +103,21 @@ const UpcomingPostsPage = () => {
 
   const handleSearch = () => {
     setPage(1);
-    fetchPosts(1, platformFilter);
+    fetchPosts(1, platformFilter, statusFilter);
     setopenFilter(false);
   };
 
   const handleClear = () => {
     setPlatformFilter("");
+    setStatusFilter("");
     setKeyword("");
     setPage(1);
-    fetchPosts(1, "");
+    fetchPosts(1, "", "");
     setopenFilter(false);
   };
 
   const handleRefresh = () => {
-    fetchPosts(page, platformFilter);
+    fetchPosts(page, platformFilter, statusFilter);
   };
 
   const handlePageChange = (newPage) => {
@@ -187,18 +196,6 @@ const UpcomingPostsPage = () => {
             >
               <div className="space-y-3">
                 <div>
-                  <label className={`block mb-1 text-sm ${isdark ? "text-white" : ""}`}>
-                    Search Keyword
-                  </label>
-                  <input
-                    className={`input w-full ${isdark ? "" : "!border-[#d9d9d9]"}`}
-                    type="text"
-                    placeholder="Enter search keyword"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
-                </div>
-                <div>
                   <ConfigProvider
                     theme={{
                       algorithm: isdark ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -233,6 +230,24 @@ const UpcomingPostsPage = () => {
                       }
                       placeholder="Select platform"
                       options={PLATFORM_OPTIONS}
+                    />
+                    <label className={`block mb-1 mt-3 text-sm ${isdark ? "text-white" : ""}`}>
+                      Status
+                    </label>
+                    <Select
+                      className="selectSet w-full"
+                      value={statusFilter}
+                      onChange={setStatusFilter}
+                      classNames={{
+                        popup: { root: isdark ? "darkSelectDropdown" : "lightSelectDropdown" },
+                      }}
+                      getPopupContainer={() => filterRef.current}
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                      }
+                      placeholder="Select status"
+                      options={STATUS_OPTIONS}
                     />
                   </ConfigProvider>
                   <div className="flex items-center gap-2 mt-3">

@@ -17,7 +17,7 @@ import { usePathname } from "next/navigation";
 const menuItems = [
   { label: "Dashboard",linknav:"/dashboard", icon: BiHomeAlt,  },
   { label: "Create Post",linknav:"/create-post", icon: BiHomeAlt,  },
-  { label: "Upcoming Posts",linknav:"/contact", icon: BiGrid },
+  { label: "Upcoming Posts",linknav:"/upcoming-posts", icon: BiGrid },
   { label: "Post History", linknav:"/post-history", icon: VscGraph },
   { label: "Assets", linknav:"/assets", icon: BsImage },
   { label: "Brands", linknav:"/brands", icon: FiEdit },

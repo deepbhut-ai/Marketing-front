@@ -1,7 +1,8 @@
 "use client";
 import { useUserContext } from "@/context/UserContext";
 import { apiFetch } from "@/lib/apiClient";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BiLayout, BiGlobe } from "react-icons/bi";
 import { FaPlus, FaTags } from "react-icons/fa";
 import { LuFlag } from "react-icons/lu";
@@ -9,7 +10,7 @@ import { MdOutlineKeyboardArrowRight } from "react-icons/md";
 import { HiOutlineSwatch, HiSparkles } from "react-icons/hi2";
 import { TbColumns2 } from "react-icons/tb";
 import { BsPeople } from "react-icons/bs";
-import { message } from "antd";
+import { message, Spin } from "antd";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ */
@@ -21,7 +22,7 @@ const normalizeApiResponse = (data) => {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Reusable pieces                                                     */
+/*  Reusable pieces (mirrors BrandsCreatePage)                          */
 /* ------------------------------------------------------------------ */
 
 const Card = ({ isdark, className = "", children }) => (
@@ -91,8 +92,9 @@ const Field = ({ isdark, label, value, onChange, rows, placeholder }) => (
 /*  Page                                                                */
 /* ------------------------------------------------------------------ */
 
-const BrandsCreatePage = () => {
+const BrandsEditPage = ({ brandId }) => {
   const { isdark } = useUserContext();
+  const router = useRouter();
   const fileRef = useRef(null);
 
   const [form, setForm] = useState({
@@ -108,12 +110,52 @@ const BrandsCreatePage = () => {
   const [logoPreview, setLogoPreview] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
 
   const mutedText = isdark ? "text-[#94a3b8]" : "text-[#64748b]";
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  /* ── Fetch brand detail on mount ───────────────────────────────── */
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await apiFetch(`api/brand/${brandId}/`);
+        const brand = data?.data ?? data ?? null;
+        if (!active || !brand) return;
+
+        setForm({
+          brand_name: brand.brand_name ?? "",
+          industry: brand.industry ?? "",
+          website_url: brand.website_url ?? "",
+          target_audience: brand.target_audience ?? "",
+          brand_summary: brand.brand_summary ?? "",
+          brand_keywords: Array.isArray(brand.brand_keywords)
+            ? brand.brand_keywords.join(", ")
+            : brand.brand_keywords ?? "",
+          primary_colors:
+            brand.primary_colors?.length > 0
+              ? brand.primary_colors
+              : ["#8b5cf6", "#a78bfa"],
+        });
+        if (brand.logo_url) setLogoPreview(brand.logo_url);
+      } catch (err) {
+        console.error("Fetch brand detail failed:", err);
+        messageApi.error(err?.message || "Failed to load brand details.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandId]);
+
+  /* ── Enhance brand summary with AI ─────────────────────────────── */
   const handleEnhanceSummary = async () => {
     if (!form.brand_summary.trim()) return;
     setEnhancing(true);
@@ -142,7 +184,9 @@ const BrandsCreatePage = () => {
         result?.description ||
         "";
       update("brand_summary", enhanced);
-      messageApi.success(result?.data?.message || result?.message || "Brand summary enhanced successfully");
+      messageApi.success(
+        result?.data?.message || result?.message || "Brand summary enhanced successfully"
+      );
     } catch (error) {
       console.error("Enhance failed:", error);
       const errData = normalizeApiResponse(error?.data) || error?.data;
@@ -165,9 +209,10 @@ const BrandsCreatePage = () => {
     setLogoPreview(URL.createObjectURL(file));
   };
 
+  /* ── Submit (PUT) ───────────────────────────────────────────────── */
   const handleSubmit = async () => {
     if (!form.brand_name.trim()) {
-      message.warning("Please enter a brand name.");
+      messageApi.warning("Please enter a brand name.");
       return;
     }
     setSubmitting(true);
@@ -182,22 +227,35 @@ const BrandsCreatePage = () => {
       formData.append("brand_keywords", form.brand_keywords);
       formData.append("primary_colors", form.primary_colors.join(","));
 
-      await apiFetch("api/brand/create-with-logo/", {
-        method: "POST",
+      await apiFetch(`api/brand/${brandId}/update-with-logo/`, {
+        method: "PUT",
         body: formData,
       });
 
-      message.success("Brand created successfully!");
+      messageApi.success("Brand updated successfully!");
       setTimeout(() => {
-        window.location.href = "/brands";
+        router.push("/brands");
       }, 1000);
     } catch (err) {
-      console.error("Create brand error:", err);
-      message.error(err?.message || "Failed to create brand.");
+      console.error("Update brand error:", err);
+      messageApi.error(err?.message || "Failed to update brand.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  /* ── Loading state ─────────────────────────────────────────────── */
+  if (loading) {
+    return (
+      <div
+        className={`flex items-center justify-center min-h-screen ${
+          isdark ? "bg-[#0f172a]" : ""
+        }`}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className={isdark ? "bg-[#0f172a] min-h-screen" : "min-h-screen"}>
@@ -212,7 +270,7 @@ const BrandsCreatePage = () => {
             <MdOutlineKeyboardArrowRight />
             <span className="text-[#8b5cf6] cursor-pointer">Brands</span>
             <MdOutlineKeyboardArrowRight />
-            <span>Create</span>
+            <span>Edit</span>
           </div>
           <Link
             href={"/brands"}
@@ -296,6 +354,7 @@ const BrandsCreatePage = () => {
                 }`}
               >
                 {logoPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={logoPreview}
                     alt="logo preview"
@@ -471,11 +530,11 @@ const BrandsCreatePage = () => {
           onClick={handleSubmit}
           className="flex items-center gap-2 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-60 text-white text-sm font-medium px-5 py-3 rounded-lg transition-colors"
         >
-          {submitting ? "Creating..." : "Create New Brand"}
+          {submitting ? "Updating..." : "Update Brand"}
         </button>
       </div>
     </div>
   );
 };
 
-export default BrandsCreatePage;
+export default BrandsEditPage;
