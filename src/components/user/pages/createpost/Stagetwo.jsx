@@ -158,13 +158,12 @@ const Stagetwo = ({
 
   // Detected on mount (client-only) so SSR doesn't guess the wrong zone —
   // defaults to the visitor's actual PC/browser timezone.
-  const [timezoneOptions, setTimezoneOptions] = useState([]);
+  const [timezoneOptions, setTimezoneOptions] = useState(() => getTimezoneOptions());
 
   useEffect(() => {
     // Auto-detect browser timezone on first mount
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-    setTimezoneOptions(getTimezoneOptions());
-  }, []);
+  }, [setTimezone]);
 
   const today = dayjs().startOf("day");
   const maxDate = today.add(MAX_RANGE_DAYS, "day").endOf("day");
@@ -456,7 +455,7 @@ const Stagetwo = ({
               style={{ width: "100%" }}
             />
             <p className={`text-xs mt-1.5 ${isdark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
-              Detected automatically from your device — change it if you're scheduling for
+              Detected automatically from your device — change it if you&apos;re scheduling for
               a different region.
             </p>
           </div>

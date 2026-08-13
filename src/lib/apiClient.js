@@ -125,19 +125,22 @@ export async function hydrateSession() {
 }
 
 /**
- * apiDownload('/agent/download/')
+ * apiDownload('/agent/download/', { defaultName: 'agent' })
  *
  * Same auth + refresh logic as apiFetch, but returns a Blob instead
  * of parsed JSON. Use for file downloads (e.g. .exe, .zip, images).
  * Also returns the filename from the Content-Disposition header.
+ * Provide a `defaultExt` option to set the fallback extension (default: .exe).
  */
 export async function apiDownload(path, options = {}) {
+  const { defaultExt = 'exe', ...fetchOptions } = options;
+
   const doRequest = (token) =>
     fetch(`${API_BASE}${path}`, {
-      ...options,
+      ...fetchOptions,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
+        ...fetchOptions.headers,
       },
     });
 
@@ -162,7 +165,7 @@ export async function apiDownload(path, options = {}) {
 
   // Extract filename from Content-Disposition header
   const disposition = res.headers.get('Content-Disposition') || '';
-  let filename = 'agent.exe';
+  let filename = `agent.${defaultExt}`;
 
   // RFC 5987 encoded format: filename*=UTF-8''example.exe
   const starMatch = disposition.match(/filename\*=(?:UTF-8'')?"?([^";]+)"?/i);
@@ -176,9 +179,9 @@ export async function apiDownload(path, options = {}) {
     }
   }
 
-  // Ensure the file ends with .exe if no extension is present
+  // Ensure the file has the requested default extension if the server didn't supply one
   if (filename && !/\.[a-z0-9]+$/i.test(filename)) {
-    filename = `${filename}.exe`;
+    filename = `${filename}.${defaultExt}`;
   }
 
   const blob = await res.blob();
