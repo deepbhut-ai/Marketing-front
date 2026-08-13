@@ -32,7 +32,6 @@ import {
   FiShare2,
   FiBarChart2,
 } from "react-icons/fi";
-import { GiMountaintop } from "react-icons/gi";
 import {
   MdOutlineDashboard,
   MdOutlineAutoAwesome,
@@ -253,8 +252,12 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-ink/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cta-gradient text-lg text-white shadow-cta-glow">
-              <GiMountaintop />
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cta-gradient text-lg text-white shadow-cta-glow overflow-hidden">
+              <img
+                src="/images/logos/logo-dark.svg"
+                alt="MarketingIRA"
+                className="h-full w-full p-1"
+              />
             </span>
             <span className="font-display text-lg font-bold tracking-tight">MarketingIRA</span>
           </div>
@@ -771,8 +774,12 @@ export default function LandingPage() {
           <div className="relative z-10 mx-auto max-w-3xl text-center">
             <div className="moving-border-card shadow-2xl shadow-black/50">
               <div className="moving-border-card-inner px-6 py-12 sm:px-12">
-                <span className="mx-auto mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-cta-gradient text-2xl text-white shadow-cta-glow animate-pulse-glow">
-                  <GiMountaintop />
+                <span className="mx-auto mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-cta-gradient text-2xl text-white shadow-cta-glow animate-pulse-glow overflow-hidden">
+                  <img
+                    src="/images/logos/logo-dark.svg"
+                    alt="MarketingIRA"
+                    className="h-full w-full p-2"
+                  />
                 </span>
                 <h2 className="font-display text-3xl font-bold tracking-tight text-white md:text-4xl">
                   Ready to grow your brand?
@@ -803,8 +810,12 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cta-gradient text-lg text-white">
-                <GiMountaintop />
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cta-gradient text-lg text-white overflow-hidden">
+                <img
+                  src="/images/logos/logo-dark.svg"
+                  alt="MarketingIRA"
+                  className="h-full w-full p-1"
+                />
               </span>
               <div>
                 <span className="font-display text-lg font-bold tracking-tight text-white">MarketingIRA</span>
