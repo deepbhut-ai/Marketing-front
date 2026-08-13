@@ -6,7 +6,7 @@ const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isdark,setIsdark]=useState(true)
+  const [isdark,setIsdark]=useState(false)
   const [openMobileNav,setOpenMobileNav]=useState(false)
   const [mounted, setMounted] = useState(false)
     // ✅ Apply dark class to body whenever isdark changes

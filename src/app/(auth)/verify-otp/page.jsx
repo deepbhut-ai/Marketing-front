@@ -221,7 +221,7 @@ export default function OtpVerificationPage() {
         <div className="relative z-10 flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cta-gradient text-white text-xl shadow-cta-glow overflow-hidden">
             <img
-              src="/images/logos/logo-dark.svg"
+              src="/icon.svg"
               alt="MarketingIRA"
               className="h-full w-full p-1"
             />
