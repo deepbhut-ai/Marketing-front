@@ -16,6 +16,7 @@ const TopBar = () => {
   const [openNotifications, setOpenNotifications] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingDmg, setDownloadingDmg] = useState(false);
 
   const { message } = App.useApp();
 
@@ -48,6 +49,33 @@ const TopBar = () => {
       message.error("Failed to download agent. Please try again.");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  // Download the agent .dmg from the API
+  const handleDownloadDmg = async () => {
+    setDownloadingDmg(true);
+    try {
+      const { blob, filename } = await apiDownload("agent/download/dmg/", { defaultExt: "dmg" });
+
+      if (!blob || blob.size === 0) {
+        throw new Error("Received empty file");
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      message.success("DMG downloaded successfully");
+    } catch (error) {
+      console.error("DMG download failed:", error);
+      message.error("Failed to download DMG. Please try again.");
+    } finally {
+      setDownloadingDmg(false);
     }
   };
 
@@ -133,6 +161,21 @@ const TopBar = () => {
         >
           <FiDownload size={16} className={downloading ? "animate-bounce" : ""} />
           {downloading ? "Downloading..." : "Download Agent"}
+        </button>
+
+        {/* Download Agent .dmg — left of the dark/light toggle */}
+        <button
+          onClick={handleDownloadDmg}
+          disabled={downloadingDmg}
+          title="Download Agent DMG"
+          className={`flex items-center gap-1.5 text-sm font-medium rounded-md px-3 py-1.5 transition-colors disabled:opacity-50 ${
+            isdark
+              ? "bg-[#1e293b] text-white hover:bg-[#334155]"
+              : "bg-[#8b5cf6] text-white hover:bg-[#7c3aed]"
+          }`}
+        >
+          <FiDownload size={16} className={downloadingDmg ? "animate-bounce" : ""} />
+          {downloadingDmg ? "Downloading..." : "Download DMG"}
         </button>
 
         <div className="relative" ref={modeRef}>
