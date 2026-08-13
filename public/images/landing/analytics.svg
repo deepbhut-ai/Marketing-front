@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" width="640" height="420" role="img" aria-label="Likes comments and engagement analytics">
+  <defs>
+    <linearGradient id="anCta" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8457f6"/>
+      <stop offset="100%" stop-color="#ea5fb0"/>
+    </linearGradient>
+    <linearGradient id="anTeal" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2fd6b9"/>
+      <stop offset="100%" stop-color="#8457f6"/>
+    </linearGradient>
+    <linearGradient id="anPink" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ea5fb0"/>
+      <stop offset="100%" stop-color="#f4485f"/>
+    </linearGradient>
+    <filter id="anGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- main panel -->
+  <rect x="60" y="40" width="520" height="340" rx="24" fill="#111a2e" stroke="#223049" stroke-width="2"/>
+  <rect x="84" y="70" width="180" height="12" rx="6" fill="#e2e8f0" opacity="0.7"/>
+  <rect x="460" y="64" width="90" height="24" rx="6" fill="url(#anCta)"/>
+  <text x="478" y="80" font-family="Inter, sans-serif" font-size="11" fill="#fff" font-weight="600">Export</text>
+
+  <!-- stat cards -->
+  <rect x="84" y="112" width="142" height="86" rx="14" fill="#131c31" stroke="#334155" stroke-width="1"/>
+  <path d="M116 148 C116 148 124 134 132 148 S148 162 132 178" fill="url(#anPink)" filter="url(#anGlow)"/>
+  <text x="116" y="182" font-family="Inter, sans-serif" font-size="13" fill="#fff" font-weight="700">12.4K Likes</text>
+  <rect x="84" y="212" width="142" height="86" rx="14" fill="#131c31" stroke="#334155" stroke-width="1"/>
+  <rect x="102" y="236" width="36" height="30" rx="6" fill="#2fd6b9" opacity="0.2"/>
+  <rect x="108" y="242" width="24" height="16" rx="4" fill="#2fd6b9"/>
+  <text x="102" y="282" font-family="Inter, sans-serif" font-size="13" fill="#fff" font-weight="700">3,892 Comments</text>
+
+  <!-- large chart -->
+  <rect x="250" y="112" width="300" height="236" rx="16" fill="#131c31" stroke="#334155" stroke-width="1"/>
+  <rect x="274" y="136" width="120" height="10" rx="5" fill="#e2e8f0" opacity="0.6"/>
+
+  <!-- grid lines -->
+  <line x1="274" y1="292" x2="526" y2="292" stroke="#334155" stroke-width="1" opacity="0.5"/>
+  <line x1="274" y1="256" x2="526" y2="256" stroke="#334155" stroke-width="1" opacity="0.3"/>
+  <line x1="274" y1="220" x2="526" y2="220" stroke="#334155" stroke-width="1" opacity="0.3"/>
+  <line x1="274" y1="184" x2="526" y2="184" stroke="#334155" stroke-width="1" opacity="0.3"/>
+
+  <!-- area fill -->
+  <path d="M274 292 L274 260 L316 240 L358 250 L400 200 L442 210 L484 170 L526 180 L526 292 Z" fill="url(#anTeal)" opacity="0.25"/>
+  <path d="M274 292 L274 260 L316 240 L358 250 L400 200 L442 210 L484 170 L526 180 L526 292 Z" fill="none" stroke="url(#anTeal)" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- second series -->
+  <path d="M274 292 L274 278 L316 270 L358 274 L400 246 L442 252 L484 232 L526 238 L526 292 Z" fill="url(#anPink)" opacity="0.2"/>
+  <path d="M274 292 L274 278 L316 270 L358 274 L400 246 L442 252 L484 232 L526 238 L526 292 Z" fill="none" stroke="url(#anPink)" stroke-width="3" stroke-linejoin="round" stroke-dasharray="6 4"/>
+
+  <!-- x labels -->
+  <text x="274" y="318" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Mon</text>
+  <text x="316" y="318" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Tue</text>
+  <text x="358" y="318" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Wed</text>
+  <text x="400" y="318" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Thu</text>
+  <text x="442" y="318" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Fri</text>
+  <text x="484" y="318" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Sat</text>
+  <text x="526" y="318" font-family="Inter, sans-serif" font-size="10" fill="#64748b" text-anchor="end">Sun</text>
+
+  <!-- floating engagement bubbles -->
+  <g filter="url(#anGlow)">
+    <rect x="20" y="130" width="90" height="40" rx="12" fill="#131c31" stroke="#ea5fb0" stroke-width="1"/>
+    <path d="M36 156 C36 148, 44 144, 52 148 C60 152, 60 160, 52 164 C48 166, 42 164, 38 160 L34 168 L36 156" fill="#f4485f"/>
+    <text x="66" y="158" font-family="Inter, sans-serif" font-size="12" fill="#fff" font-weight="600">+24%</text>
+  </g>
+
+  <g filter="url(#anGlow)">
+    <rect x="530" y="60" width="100" height="40" rx="12" fill="#131c31" stroke="#2fd6b9" stroke-width="1"/>
+    <rect x="546" y="78" width="20" height="16" rx="4" fill="#2fd6b9"/>
+    <text x="574" y="86" font-family="Inter, sans-serif" font-size="12" fill="#fff" font-weight="600">+1.2K</text>
+  </g>
+
+  <!-- glow spots -->
+  <circle cx="120" cy="360" r="40" fill="#ea5fb0" opacity="0.12" filter="url(#anGlow)"/>
+  <circle cx="560" cy="300" r="50" fill="#2fd6b9" opacity="0.12" filter="url(#anGlow)"/>
+</svg>
