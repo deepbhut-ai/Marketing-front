@@ -169,6 +169,40 @@ const Stagetwo = ({
   const today = dayjs().startOf("day");
   const maxDate = today.add(MAX_RANGE_DAYS, "day").endOf("day");
 
+  // "From" time for presets — now + 15 minutes, always safely in the future
+  // so the past-date guard in onChange won't reject it. No rounding needed;
+  // rounding can roll the minute back to 0 without incrementing the hour,
+  // accidentally producing a past time.
+  const fromStart = dayjs().add(15, "minute").second(0).millisecond(0);
+
+  // Quick-select presets shown inside the RangePicker panel.
+  // "From" is always now+15min (future-safe); "To" is end of the target day.
+  const rangePresets = [
+    {
+      label: "Today",
+      value: [fromStart, dayjs().endOf("day")],
+    },
+    {
+      label: "Next Day",
+      value: [
+        dayjs().add(1, "day").hour(fromStart.hour()).minute(fromStart.minute()).second(0),
+        dayjs().add(1, "day").endOf("day"),
+      ],
+    },
+    {
+      label: "Next 3 Days",
+      value: [fromStart, dayjs().add(2, "day").endOf("day")],
+    },
+    {
+      label: "Next 7 Days",
+      value: [fromStart, dayjs().add(6, "day").endOf("day")],
+    },
+    {
+      label: "Next 10 Days",
+      value: [fromStart, dayjs().add(9, "day").endOf("day")],
+    },
+  ];
+
   // ---- antd theme — same pattern as the rest of the app ------------------
   const antdTheme = {
     algorithm: isdark ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -245,10 +279,10 @@ const Stagetwo = ({
     }
 
     // Safety-net guards (also enforced in the RangePicker onChange):
-    //   1. From can't be in the past
+    //   1. From can't be in the past (minute-level precision)
     //   2. To must be after From
     const [from, to] = scheduleRange;
-    if (from && from.isBefore(dayjs(), "second")) {
+    if (from && from.isBefore(dayjs(), "minute")) {
       messageApi.error("From date & time can't be in the past.");
       return;
     }
@@ -374,9 +408,10 @@ const Stagetwo = ({
                 const [from, to] = value;
 
                 // Guard 1: "From" can't be before the current moment.
-                // We compare with second-level precision so a time picked
-                // a few seconds ago doesn't falsely trigger.
-                if (from && from.isBefore(dayjs(), "second")) {
+                // Compare at minute precision so preset-selected times (which
+                // are set to now+15min) aren't falsely rejected by a few
+                // seconds of processing delay.
+                if (from && from.isBefore(dayjs(), "minute")) {
                   messageApi.error("From date & time can't be in the past.");
                   return; // don't update state — picker keeps the old value
                 }
@@ -389,6 +424,7 @@ const Stagetwo = ({
 
                 setScheduleRange(value);
               }}
+              presets={rangePresets}
               showTime={{ format: "hh:mm A" }}
               format="DD MMM YYYY, hh:mm A"
               disabledDate={disabledDate}
