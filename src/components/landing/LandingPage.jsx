@@ -254,7 +254,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cta-gradient text-lg text-white shadow-cta-glow overflow-hidden">
               <img
-                src="/images/logos/logo-dark.svg"
+                src="/icon.svg"
                 alt="MarketingIRA"
                 className="h-full w-full p-1"
               />
@@ -776,7 +776,7 @@ export default function LandingPage() {
               <div className="moving-border-card-inner px-6 py-12 sm:px-12">
                 <span className="mx-auto mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-cta-gradient text-2xl text-white shadow-cta-glow animate-pulse-glow overflow-hidden">
                   <img
-                    src="/images/logos/logo-dark.svg"
+                    src="/icon.svg"
                     alt="MarketingIRA"
                     className="h-full w-full p-2"
                   />
@@ -812,7 +812,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cta-gradient text-lg text-white overflow-hidden">
                 <img
-                  src="/images/logos/logo-dark.svg"
+                  src="/icon.svg"
                   alt="MarketingIRA"
                   className="h-full w-full p-1"
                 />

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import { BiGrid, BiHomeAlt } from "react-icons/bi";
+import { FaRegSquarePlus } from "react-icons/fa6";
 import { BsImage, BsTools } from "react-icons/bs";
 import { FiEdit, FiPhoneCall } from "react-icons/fi";
 import { GoCreditCard, GoNote } from "react-icons/go";
@@ -16,7 +17,7 @@ import { Tooltip } from "antd";
 import { usePathname } from "next/navigation";
 const menuItems = [
   { label: "Dashboard",linknav:"/dashboard", icon: BiHomeAlt,  },
-  { label: "Create Post",linknav:"/create-post", icon: BiHomeAlt,  },
+  { label: "Create Post",linknav:"/create-post", icon: FaRegSquarePlus,  },
   { label: "Upcoming Posts",linknav:"/upcoming-posts", icon: BiGrid },
   { label: "Post History", linknav:"/post-history", icon: VscGraph },
   { label: "Assets", linknav:"/assets", icon: BsImage },
