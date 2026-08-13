@@ -13,7 +13,16 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "MarketingIRA — AI-Powered Social Media Suite",
-  description: "Connect your social accounts, generate on-brand posts with AI, and publish immediately or schedule them for later — all from one dashboard.",
+  description:
+    "Connect your social accounts, generate on-brand posts with AI, and publish immediately or schedule them for later — all from one dashboard.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/images/logos/logo.svg", type: "image/svg+xml", sizes: "1024x1024" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/images/logos/logo.svg",
+  },
 };
 
 export default function RootLayout({ children }) {

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- rounded square background -->
+  <rect x="112" y="112" width="800" height="800" rx="212" ry="212" fill="#5B4DFF"/>
+
+  <!-- white M -->
+  <path d="M310 740 L310 360 L512 540 L714 360 L714 740"
+        fill="none" stroke="#ffffff" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- orange dot -->
+  <circle cx="770" cy="320" r="62" fill="#ff6b35"/>
+
+  <!-- sound arcs -->
+  <path d="M860 270 Q935 390 860 510" fill="none" stroke="#ff6b35" stroke-width="34" stroke-linecap="round"/>
+  <path d="M935 205 Q1035 390 935 575" fill="none" stroke="#ff9f7a" stroke-width="34" stroke-linecap="round" opacity="0.7"/>
+</svg>

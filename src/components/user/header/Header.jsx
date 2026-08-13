@@ -44,16 +44,29 @@ const pathname = usePathname();
       <div
         className={`side-bar  shadow-md h-dvh flex flex-col overflow-hidden
           transition-[width] duration-300 ease-in-out
-          ${sidebarOpen ? "w-56" : "w-16"} hidden lg:flex`}
+          ${sidebarOpen ? "w-72" : "w-16"} hidden lg:flex`}
       >
-        <div className="ps-2 pe-3 py-2 shrink-0">
-          <Image
-            src="/images/logos/logo.svg"
-            alt="marketing ira"
-            width={200}
-            height={100}
-             priority
-          />
+        <div className={`shrink-0 flex ${sidebarOpen ? "px-4 py-3" : "p-2 justify-center"}`}>
+          {sidebarOpen ? (
+            <Image
+              src={isdark ? "/images/logos/logo-dark.svg" : "/images/logos/logo.svg"}
+              alt="marketing ira"
+              width={248}
+              height={56}
+              className="h-11 w-auto object-contain"
+              priority
+              unoptimized
+            />
+          ) : (
+            <Image
+              src="/icon.svg"
+              alt="marketing ira"
+              width={48}
+              height={48}
+              className="h-10 w-auto object-contain"
+              priority
+            />
+          )}
         </div>
 
         <div className="nav_bar flex-1 min-h-0 overflow-y-auto nav_scrollbar pe-0">
@@ -120,17 +133,19 @@ const pathname = usePathname();
       {/* Mobile nav — always mounted, slides in/out via transform for a smooth animation */}
       <div
         className={`side-bar fixed top-0 left-0 z-50 shadow-md h-dvh flex flex-col overflow-hidden
-          w-56 transition-transform duration-300 ease-in-out will-change-transform
+          w-72 transition-transform duration-300 ease-in-out will-change-transform
           ${openMobileNav ? "translate-x-0" : "-translate-x-full"}
           block lg:hidden`}
       >
-        <div className="ps-2 pe-3 py-2 shrink-0">
+        <div className="px-4 py-3 shrink-0">
           <Image
-            src="/images/logos/logo.svg"
+            src={isdark ? "/images/logos/logo-dark.svg" : "/images/logos/logo.svg"}
             alt="marketing ira"
-            width={200}
-            height={100}
-             priority
+            width={248}
+            height={56}
+            className="h-11 w-auto object-contain"
+            priority
+            unoptimized
           />
         </div>
 

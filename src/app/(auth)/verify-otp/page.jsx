@@ -32,7 +32,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from 'antd';
 import { FiAlertCircle, FiCheckCircle, FiZap, FiCalendar, FiTrendingUp, FiArrowLeft, FiMail } from 'react-icons/fi';
-import { GiMountaintop } from 'react-icons/gi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 const VERIFY_OTP_PATH = '/accounts/verify-otp/'; // <-- confirm against your API
@@ -220,8 +219,12 @@ export default function OtpVerificationPage() {
         />
 
         <div className="relative z-10 flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cta-gradient text-white text-xl shadow-cta-glow">
-            <GiMountaintop />
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cta-gradient text-white text-xl shadow-cta-glow overflow-hidden">
+            <img
+              src="/images/logos/logo-dark.svg"
+              alt="MarketingIRA"
+              className="h-full w-full p-1"
+            />
           </span>
           <span className="font-display text-xl font-bold tracking-tight">MarketingIRA</span>
         </div>

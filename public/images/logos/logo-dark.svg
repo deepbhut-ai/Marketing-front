@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 76" width="380" height="76">
-  <style>
-    .wordmark { fill: #f9fafb; }
-    .tagline { fill: #9ca3af; }
-    @media (prefers-color-scheme: light) {
-      .wordmark { fill: #1f2937; }
-      .tagline { fill: #6b7280; }
-    }
-  </style>
-
   <!-- icon mark: rounded square with M, dot, and sound arcs -->
   <g transform="translate(0, 0)">
     <!-- rounded square background -->
@@ -28,10 +19,10 @@
 
   <!-- wordmark: marketingira -->
   <text x="82" y="43" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="30" font-weight="800" letter-spacing="-0.5">
-    <tspan class="wordmark">marketing</tspan>
+    <tspan fill="#f9fafb">marketing</tspan>
     <tspan fill="#ff6b35">ira</tspan>
   </text>
 
   <!-- tagline -->
-  <text x="83" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="700" letter-spacing="1.5" class="tagline">SOCIAL AUTO-POSTING</text>
+  <text x="83" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="700" letter-spacing="1.5" fill="#9ca3af">SOCIAL AUTO-POSTING</text>
 </svg>
